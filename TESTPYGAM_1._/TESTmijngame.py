@@ -305,7 +305,7 @@ class Player:
 
         current_time = pygame.time.get_ticks()
 
-        if toetsen[pygame.K_x]:
+        if toetsen[pygame.K_a]:
 
             if current_time - self.last_super > self.super_cooldown:
 
