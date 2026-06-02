@@ -19,20 +19,33 @@ FPS = 60
 schaal_breedte = 1
 schaal_hooghte = 2
 
-achtergrond = pygame.image.load(
-    r"TESTPYGAM_1._\achtergrond\Schermafbeelding 2026-05-28 104846.png"
+achtergrond_fase1 = pygame.image.load(
+    r"TESTPYGAM_1._\achtergrond\ground afb.png"
 )
 
-achtergrond = pygame.transform.scale(
-    achtergrond,
+achtergrond_fase2 = pygame.image.load(
+    r"TESTPYGAM_1._\achtergrond\Schermafbeelding 2026-05-28 104846.png"                    
+)
+
+
+
+
+achtergrond_fase1 = pygame.transform.scale(
+    achtergrond_fase1,
     (
-        achtergrond.get_width() * schaal_breedte,
-        achtergrond.get_height() * schaal_hooghte
+        achtergrond_fase1.get_width() * schaal_breedte,
+        achtergrond_fase1.get_height() * schaal_hooghte
     )
 )
 
-BREEDTE = achtergrond.get_width()
-HOOGTE = achtergrond.get_height()
+BREEDTE = achtergrond_fase1.get_width()
+HOOGTE = achtergrond_fase1.get_height()
+
+achtergrond_fase2 = pygame.transform.scale(
+    achtergrond_fase2,
+    (BREEDTE, HOOGTE)
+)
+
 
 frame = pygame.display.set_mode((BREEDTE, HOOGTE))
 
@@ -185,9 +198,46 @@ class Player:
 
         schaal = 1.2
 
-        self.image = pygame.image.load(
-            r"TESTPYGAM_1._\skins jet\pixilart-drawing.png"
-        )
+        # SPRITE SHEET LADEN
+        self.sprite_sheet = pygame.image.load(
+            r"TESTPYGAM_1._\skins jet\llama.png"
+        ).convert_alpha()
+
+        self.frames = []
+
+        # bereken grootte per frame
+        sheet_width = self.sprite_sheet.get_width()
+        sheet_height = self.sprite_sheet.get_height()
+
+        frame_width = sheet_width // 2
+        frame_height = sheet_height // 3
+
+        # frames eruit knippen
+        for row in range(3):
+            for col in range(2):
+
+                frame = self.sprite_sheet.subsurface(
+                    pygame.Rect(
+                        col * frame_width,
+                        row * frame_height,
+                        frame_width,
+                        frame_height
+                    )
+                )
+
+                frame = pygame.transform.scale(frame, (100, 100))
+
+
+
+                self.frames.append(frame)
+
+
+        # animatie
+        self.current_frame = 0
+        self.animation_speed = 0.2
+
+        self.image = self.frames[0]
+
 
         self.super_image = pygame.image.load(
             r"TESTPYGAM_1._\skin munitie\hadouken-hadoken-pixel-art-ryu-others-thumbnail.jpg"
@@ -207,15 +257,7 @@ class Player:
             (120, 120)
         )
 
-        self.image = pygame.transform.rotate(self.image, -90)
 
-        self.image = pygame.transform.scale(
-            self.image,
-            (
-                self.image.get_width() * schaal,
-                self.image.get_height() * schaal
-            )
-        )
 
         self.rect = pygame.Rect(
             200,
@@ -248,24 +290,84 @@ class Player:
 
         self.hit_counter = 0
 
-    def movement(self):
+        self.velocity_y = 0
+        self.gravity = 0.5
+        self.jump_power = -10
+        self.on_ground = False
+
+
+    def movement(self, phase):
 
         toetsen = pygame.key.get_pressed()
+        moving = False   # ✅ BELANGRIJK
 
-        if toetsen[pygame.K_q]:
-            self.rect.x -= self.speed
+        # =====================================
+        # PHASE 1
+        # =====================================
+        if phase == 1:
 
-        if toetsen[pygame.K_d]:
-            self.rect.x += self.speed
+            if toetsen[pygame.K_q]:
+                self.rect.x -= self.speed
+                moving = True
 
-        if toetsen[pygame.K_z]:
-            self.rect.y -= self.speed
+            if toetsen[pygame.K_d]:
+                self.rect.x += self.speed
+                moving = True
 
-        if toetsen[pygame.K_s]:
-            self.rect.y += self.speed
+            # springen
+            if toetsen[pygame.K_z] and self.on_ground:
+                self.velocity_y = self.jump_power
+                self.on_ground = False
 
-        # SCHERM GRENZEN
+            # gravity
+            self.velocity_y += self.gravity
+            self.rect.y += self.velocity_y
 
+            ground_level = HOOGTE - 120
+
+            if self.rect.bottom >= ground_level:
+                self.rect.bottom = ground_level
+                self.velocity_y = 0
+                self.on_ground = True
+
+        # =====================================
+        # PHASE 2
+        # =====================================
+        else:
+
+            if toetsen[pygame.K_q]:
+                self.rect.x -= self.speed
+                moving = True
+
+            if toetsen[pygame.K_d]:
+                self.rect.x += self.speed
+                moving = True
+
+            if toetsen[pygame.K_z]:
+                self.rect.y -= self.speed
+                moving = True
+
+            if toetsen[pygame.K_s]:
+                self.rect.y += self.speed
+                moving = True
+
+        # =====================================
+        # ANIMATIE (werkt voor beide fases)
+        # =====================================
+        if moving:
+            self.current_frame += self.animation_speed
+
+            if self.current_frame >= len(self.frames):
+                self.current_frame = 0
+
+            self.image = self.frames[int(self.current_frame)]
+        else:
+            self.current_frame = 0
+            self.image = self.frames[0]
+
+        # =====================================
+        # BOUNDARIES
+        # =====================================
         if self.rect.left < 0:
             self.rect.left = 0
 
@@ -277,6 +379,9 @@ class Player:
 
         if self.rect.bottom > HOOGTE:
             self.rect.bottom = HOOGTE
+
+        
+
 
     def shoot(self, bullets):
 
@@ -741,7 +846,7 @@ def end_screen(text):
 
     while waiting:
 
-        frame.blit(achtergrond, (0, 0))
+        frame.blit(achtergrond_fase1, (0, 0))
 
         title = big_font.render(
             text,
@@ -837,7 +942,7 @@ class Game:
 
     def update(self):
 
-        self.player.movement()
+        self.player.movement(self.boss.phase)
         self.player.shoot(self.bullets)
         self.player.super_attack(self.bullets)
 
@@ -1127,13 +1232,14 @@ class Game:
         # PHASE 2 SCROLL
         # =====================================
 
-        if self.boss.phase == 2:
+        self.bg_x -= self.scroll_speed
 
-            self.bg_x -= self.scroll_speed
-
-            if self.bg_x <= -BREEDTE:
-                self.bg_x = 0
-
+        if self.bg_x <= -BREEDTE:
+            self.bg_x = 0
+        if self.boss.phase == 1:
+            self.scroll_speed = 2   # langzaam
+        else:
+            self.scroll_speed = 5   # sneller = meer chaos
 
     def draw_ui(self):
 
@@ -1179,16 +1285,13 @@ class Game:
 
         if self.boss.phase == 1:
 
-            frame.blit(achtergrond, (0, 0))
+            frame.blit(achtergrond_fase1, (self.bg_x, 0))
+            frame.blit(achtergrond_fase1, (self.bg_x + BREEDTE, 0))
 
         else:
 
-            frame.blit(achtergrond, (self.bg_x, 0))
-
-            frame.blit(
-                achtergrond,
-                (self.bg_x + BREEDTE, 0)
-            )
+            frame.blit(achtergrond_fase2, (self.bg_x, 0))
+            frame.blit(achtergrond_fase2, (self.bg_x + BREEDTE, 0))
 
         # DRAW OBJECTS
 
