@@ -1373,6 +1373,9 @@ def set_controls(value, scheme):
 
 
 
+
+
+
 class MainMenu:
 
     def __init__(self):
@@ -1381,38 +1384,45 @@ class MainMenu:
         self.background = pygame.image.load(
             r"TESTPYGAM_1._\achtergrond\Background_Menu\cuphead_00.png"
         )
-
         self.background = pygame.transform.scale(
             self.background,
             (BREEDTE, HOOGTE)
         )
 
+        # animatie
+        self.anim_time = 0
+
+        # 🎬 film grain
+        self.grain_surface = pygame.Surface((BREEDTE, HOOGTE))
+        self.grain_surface.set_alpha(25)
+
+        # ➤ selectie pijltje
+        self.arrow_font = pygame.font.SysFont(None, 60)
+
         # 🎨 THEME
         self.theme = pygame_menu.themes.THEME_SOLARIZED.copy()
 
-        # Volledig transparant maken vereist dat het menu de achtergrond hertekent
         self.theme.background_color = (0, 0, 0, 0)
         self.theme.title_background_color = (0, 0, 0, 0)
         self.theme.title_font_color = (0, 0, 0, 0)
 
-        self.theme.widget_background_color = (255, 255, 255)
+        # 🎨 betere kleuren (minder “clean”)
+        self.theme.widget_background_color = (240, 240, 240)
         self.theme.widget_font_color = (0, 0, 0)
+        self.theme.widget_background_color_hover = (255, 220, 100)
+        self.theme.widget_font_color_hover = (200, 0, 0)
+
         self.theme.widget_border_color = (0, 0, 0)
         self.theme.widget_border_width = 3
         self.theme.widget_border_radius = 15
         self.theme.widget_padding = 20
         self.theme.widget_font_size = 45
-        self.theme.widget_background_color_hover = (255, 200, 100)
 
-        # 🟢 GEFIXT: Geen negatieve offset meer, maar een veilige marge
-        self.theme.widget_width = 380                                 # Geeft alle knoppen exact dezelfde breedte
-        self.theme.widget_alignment = pygame_menu.locals.ALIGN_RIGHT  # Duwt de knoppen strak naar rechts
-
-        # ✅ Spacing tussen knoppen (X-marge, Y-marge)
-        # De 50 zorgt er nu veilig voor dat de knoppen 50 pixels afstand houden van de rechterrand.
+        self.theme.widget_width = 380
+        self.theme.widget_alignment = pygame_menu.locals.ALIGN_RIGHT
         self.theme.widget_margin = (-10, 30)
 
-        # 🎮 MAIN MENU
+        # 🎮 MENU
         self.menu = pygame_menu.Menu('', BREEDTE, HOOGTE, theme=self.theme)
 
         # ⚙️ SETTINGS MENU
@@ -1432,26 +1442,73 @@ class MainMenu:
         self.settings_menu.add.button('BACK', pygame_menu.events.BACK)
 
         # ✅ KNOPPEN
-        self.menu.add.vertical_margin(100)  # ⬅️ duwt knoppen naar beneden
+        self.menu.add.vertical_margin(100)
 
         self.menu.add.button('START', start_game)
         self.menu.add.button('SETTINGS', self.settings_menu)
         self.menu.add.button('QUIT', quit_game)
 
+    # 🎬 film grain
+    def draw_grain(self):
+
+        self.grain_surface.fill((0, 0, 0))
+
+        for _ in range(250):  # lager = subtieler
+            x = random.randint(0, BREEDTE - 1)
+            y = random.randint(0, HOOGTE - 1)
+
+            shade = random.randint(160, 255)
+            self.grain_surface.set_at((x, y), (shade, shade, shade))
+
+    # 🎮 DRAW
     def draw_background(self):
-        # Wist het oude frame en tekent de afbeelding opnieuw
+
+        self.anim_time += 0.03
+
+        # 🎬 zachte beweging
+        bounce = math.sin(self.anim_time) * 3
+        shake_x = math.sin(self.anim_time * 2) * 1.2
+        shake_y = math.cos(self.anim_time * 2) * 1.2
+
         frame.fill((0, 0, 0))
-        frame.blit(self.background, (0, 0))
+
+        # 🎨 achtergrond
+        frame.blit(
+            self.background,
+            (int(shake_x), int(bounce + shake_y))
+        )
+
+        # 🌑 subtiele shadow (depth)
+        shadow = pygame.Surface((BREEDTE, HOOGTE))
+        shadow.set_alpha(30)
+        shadow.fill((0, 0, 0))
+        frame.blit(shadow, (2, 2))
+
+        # 🎬 film grain
+        self.draw_grain()
+        frame.blit(self.grain_surface, (0, 0))
+
+        # 🎯 selectie pijltje
+        selected = self.menu.get_current().get_selected_widget()
+
+        if selected:
+            rect = selected.get_rect()
+
+            arrow = self.arrow_font.render("->", True, (255, 255, 255))
+
+            frame.blit(
+                arrow,
+                (rect.x - 40, rect.y + 10)
+            )
 
     def run(self):
-        # Voorkom dat muziek dubbel start als je terugkeert naar het menu
+
         if not pygame.mixer.get_busy():
             menusound.play(-1)
-            
-        # Belangrijk: koppel de bgfun aan de mainloop om ghosting te stoppen
+
         self.menu.mainloop(frame, bgfun=self.draw_background)
 
 
-# Initialisatie en start
+# START
 menu = MainMenu()
 menu.run()
