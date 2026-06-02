@@ -321,56 +321,107 @@ class Player:
         toetsen = pygame.key.get_pressed()
 
         current_time = pygame.time.get_ticks()
+        if control_scheme == "AZERTY":
 
-        if toetsen[pygame.K_a]:
+            if toetsen[pygame.K_a]:
 
-            if current_time - self.last_super > self.super_cooldown:
+                if current_time - self.last_super > self.super_cooldown:
 
-                # MEGA MOVE
+                    # MEGA MOVE
 
-                if self.super_meter == 5:
+                    if self.super_meter == 5:
 
-                    mega_bullet = Bullet(
-                        self.rect.centerx,
-                        self.rect.centery,
-                        250,
-                        250,
-                        self.mega_image
-                    )
+                        mega_bullet = Bullet(
+                            self.rect.centerx,
+                            self.rect.centery,
+                            250,
+                            250,
+                            self.mega_image
+                        )
 
-                    mega_bullet.speed = 20
+                        mega_bullet.speed = 20
 
-                    mega_bullet.rect = self.mega_image.get_rect(
-                        center=self.rect.center
-                    )
+                        mega_bullet.rect = self.mega_image.get_rect(
+                            center=self.rect.center
+                        )
 
-                    bullets.append(mega_bullet)
+                        bullets.append(mega_bullet)
 
-                    self.super_meter = 0
+                        self.super_meter = 0
 
-                # NORMALE SUPER
+                    # NORMALE SUPER
 
-                elif self.super_meter >= 1:
+                    elif self.super_meter >= 1:
 
-                    super_bullet = Bullet(
-                        self.rect.centerx,
-                        self.rect.centery,
-                        120,
-                        120,
-                        self.super_image
-                    )
+                        super_bullet = Bullet(
+                            self.rect.centerx,
+                            self.rect.centery,
+                            120,
+                            120,
+                            self.super_image
+                        )
 
-                    super_bullet.speed = 18
+                        super_bullet.speed = 18
 
-                    super_bullet.rect = self.super_image.get_rect(
-                        center=self.rect.center
-                    )
+                        super_bullet.rect = self.super_image.get_rect(
+                            center=self.rect.center
+                        )
 
-                    bullets.append(super_bullet)
+                        bullets.append(super_bullet)
 
-                    self.super_meter -= 1
+                        self.super_meter -= 1
 
-                self.last_super = current_time
+                    self.last_super = current_time
+        else:
+            if toetsen[pygame.K_q]:
+
+                if current_time - self.last_super > self.super_cooldown:
+
+                    # MEGA MOVE
+
+                    if self.super_meter == 5:
+
+                        mega_bullet = Bullet(
+                            self.rect.centerx,
+                            self.rect.centery,
+                            250,
+                            250,
+                            self.mega_image
+                        )
+
+                        mega_bullet.speed = 20
+
+                        mega_bullet.rect = self.mega_image.get_rect(
+                            center=self.rect.center
+                        )
+
+                        bullets.append(mega_bullet)
+
+                        self.super_meter = 0
+
+                    # NORMALE SUPER
+
+                    elif self.super_meter >= 1:
+
+                        super_bullet = Bullet(
+                            self.rect.centerx,
+                            self.rect.centery,
+                            120,
+                            120,
+                            self.super_image
+                        )
+
+                        super_bullet.speed = 18
+
+                        super_bullet.rect = self.super_image.get_rect(
+                            center=self.rect.center
+                        )
+
+                        bullets.append(super_bullet)
+
+                        self.super_meter -= 1
+
+                    self.last_super = current_time
 
     def draw(self, screen):
 
