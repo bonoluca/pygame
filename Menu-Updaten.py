@@ -1373,7 +1373,6 @@ def set_controls(value, scheme):
 
 
 
-
 class MainMenu:
 
     def __init__(self):
@@ -1390,8 +1389,9 @@ class MainMenu:
 
         # 🎨 THEME
         self.theme = pygame_menu.themes.THEME_SOLARIZED.copy()
-        self.theme.background_color = (0, 0, 0, 0)
 
+        # Volledig transparant maken vereist dat het menu de achtergrond hertekent
+        self.theme.background_color = (0, 0, 0, 0)
         self.theme.title_background_color = (0, 0, 0, 0)
         self.theme.title_font_color = (0, 0, 0, 0)
 
@@ -1404,9 +1404,16 @@ class MainMenu:
         self.theme.widget_font_size = 45
         self.theme.widget_background_color_hover = (255, 200, 100)
 
+        # 🟢 GEFIXT: Geen negatieve offset meer, maar een veilige marge
+        self.theme.widget_width = 380                                 # Geeft alle knoppen exact dezelfde breedte
+        self.theme.widget_alignment = pygame_menu.locals.ALIGN_RIGHT  # Duwt de knoppen strak naar rechts
+
+        # ✅ Spacing tussen knoppen (X-marge, Y-marge)
+        # De 50 zorgt er nu veilig voor dat de knoppen 50 pixels afstand houden van de rechterrand.
+        self.theme.widget_margin = (-10, 30)
+
         # 🎮 MAIN MENU
         self.menu = pygame_menu.Menu('', BREEDTE, HOOGTE, theme=self.theme)
-        self.menu._center_content = False
 
         # ⚙️ SETTINGS MENU
         self.settings_menu = pygame_menu.Menu(
@@ -1424,54 +1431,27 @@ class MainMenu:
 
         self.settings_menu.add.button('BACK', pygame_menu.events.BACK)
 
-        # ✅ knoppen
-        self.start_btn = self.menu.add.button(
-            'START', start_game,
-            float=True, align=pygame_menu.locals.ALIGN_RIGHT
-        )
+        # ✅ KNOPPEN
+        self.menu.add.vertical_margin(100)  # ⬅️ duwt knoppen naar beneden
 
-        self.settings_btn = self.menu.add.button(
-            'SETTINGS', self.settings_menu,
-            float=True, align=pygame_menu.locals.ALIGN_RIGHT
-        )
-
-        self.quit_btn = self.menu.add.button(
-            'QUIT', quit_game,
-            float=True, align=pygame_menu.locals.ALIGN_LEFT
-        )
-
-        self.update_positions()
-
-    def update_positions(self):
-
-        marge = 80
-
-        # START rechts
-        self.start_btn.set_position(
-            BREEDTE - self.start_btn.get_width() - marge,
-            HOOGTE - 240
-        )
-
-        # SETTINGS rechts (onder start)
-        self.settings_btn.set_position(
-            BREEDTE - self.settings_btn.get_width() - marge,
-            HOOGTE - 200
-        )
-
-        # QUIT links
-        self.quit_btn.set_position(
-            marge,
-            HOOGTE - 200
-        )
+        self.menu.add.button('START', start_game)
+        self.menu.add.button('SETTINGS', self.settings_menu)
+        self.menu.add.button('QUIT', quit_game)
 
     def draw_background(self):
+        # Wist het oude frame en tekent de afbeelding opnieuw
         frame.fill((0, 0, 0))
         frame.blit(self.background, (0, 0))
 
     def run(self):
-        menusound.play(-1)
+        # Voorkom dat muziek dubbel start als je terugkeert naar het menu
+        if not pygame.mixer.get_busy():
+            menusound.play(-1)
+            
+        # Belangrijk: koppel de bgfun aan de mainloop om ghosting te stoppen
         self.menu.mainloop(frame, bgfun=self.draw_background)
 
 
+# Initialisatie en start
 menu = MainMenu()
 menu.run()
