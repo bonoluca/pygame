@@ -1343,6 +1343,26 @@ class Game:
 
             self.draw()
 
+
+# =====================================
+# FADE EFFECT
+# =====================================
+
+def fade(screen, width, height, speed=5):
+
+    fade_surface = pygame.Surface((width, height))
+    fade_surface.fill((0, 0, 0))
+
+    for alpha in range(0, 255, speed):
+
+        fade_surface.set_alpha(alpha)
+
+        screen.blit(fade_surface, (0, 0))
+        pygame.display.update()
+
+        pygame.time.delay(10)
+
+
 # =====================================
 # START GAME
 # =====================================
@@ -1354,6 +1374,12 @@ def start_game():
     game = Game()
 
     game.run()
+
+def start_with_fade():
+
+    fade(frame, BREEDTE, HOOGTE)  # 🎬 fade eerst
+
+    start_game()  # start daarna game
 
 
 
@@ -1444,7 +1470,7 @@ class MainMenu:
         # ✅ KNOPPEN
         self.menu.add.vertical_margin(100)
 
-        self.menu.add.button('START', start_game)
+        self.menu.add.button('START', start_with_fade)
         self.menu.add.button('SETTINGS', self.settings_menu)
         self.menu.add.button('QUIT', quit_game)
 
