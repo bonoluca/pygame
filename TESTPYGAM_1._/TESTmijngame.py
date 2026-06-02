@@ -134,7 +134,7 @@ class EnemyBullet:
 class LaserWall:
 
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, y, 40, 200)
+        self.rect = pygame.Rect(x, 0, 40, HOOGTE)
         self.speed = -4
 
     def update(self):
@@ -157,12 +157,13 @@ class WeakLaser(LaserWall):
 class LockRocket:
 
     def __init__(self, x, y, target):
+        self.target = target
         self.rect = pygame.Rect(x, y, 50, 30)
 
         self.target_x = target.rect.centerx
         self.target_y = target.rect.centery
 
-        self.speed = 5
+        self.speed = 7
 
         dx = self.target_x - x
         dy = self.target_y - y
@@ -176,17 +177,24 @@ class LockRocket:
             self.speed_y = 0
 
         self.spawn_time = pygame.time.get_ticks()
-
-    def update(self):
-        self.rect.x += self.speed_x
-        self.rect.y += self.speed_y
-
+    
     def should_destroy(self):
         return pygame.time.get_ticks() - self.spawn_time > 12000
 
-    def draw(self, screen):
-        pygame.draw.rect(screen, (255, 80, 0), self.rect)
-        pygame.draw.rect(screen, (255, 255, 0), self.rect, 3)
+    
+    def update(self):
+
+        dx = self.target.rect.centerx - self.rect.centerx
+        dy = self.target.rect.centery - self.rect.centery
+
+        dist = math.hypot(dx, dy)
+
+        if dist != 0:
+            self.speed_x = (dx / dist) * self.speed
+            self.speed_y = (dy / dist) * self.speed
+
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
 
 
 class Spike:
@@ -752,6 +760,9 @@ class Boss:
         self.phase2_stage = 0
         self.big_mode = False
 
+        self.laser_timer = 0
+        self.laser_cooldown = 3000  # 3000 ms = 3 seconden
+
     def update(self):
 
         # =====================================
@@ -789,19 +800,22 @@ class Boss:
 
                 self.rect.x = BREEDTE - self.rect.width - 50
 
-    def attack(self, enemy_bullets):
+
+    def attack(self, enemy_bullets, minis, player):
 
         current_time = pygame.time.get_ticks()
 
-        if current_time - self.attack_timer > self.attack_cooldown:
+        if current_time - self.attack_timer <= self.attack_cooldown:
+            return
 
-            self.attack_timer = current_time
+        self.attack_timer = current_time
 
-            if self.phase == 2 and self.hp <= 60:
-                attack_type = 1  # ✅ ALTIJD multishot
-            else:
-                attack_type = random.choice(["seed", "spike", "burst"])
-            
+        # =====================================
+        # ✅ PHASE 1 (blijft hetzelfde)
+        # =====================================
+        if self.phase == 1:
+
+            attack_type = random.choice(["seed", "spike", "burst"])
 
             if attack_type == "seed":
 
@@ -811,78 +825,111 @@ class Boss:
                     -8,
                     random.randint(-2, 2)
                 )
-
                 enemy_bullets.append(bullet)
+
             elif attack_type == "spike":
 
                 x_pos = random.randint(100, BREEDTE - 200)
-
                 spike = Spike(x_pos, HOOGTE - 120)
-
                 enemy_bullets.append(spike)
-            
+
             elif attack_type == "burst":
 
                 for angle in range(-3, 4):
-
                     bullet = EnemyBullet(
                         self.rect.left,
                         self.rect.centery,
                         -6,
                         angle * 2
                     )
-
                     enemy_bullets.append(bullet)
 
+        # =====================================
+        # ✅ PHASE 2 (JOUW SCHEMA)
+        # =====================================
+        else:
 
+            # =============================
+            # 🟡 HP > 80 → SPREAD ONLY
+            # =============================
+            if self.hp > 80:
 
-            # SPREAD SHOT
-
-            if attack_type == 1:
-
-                for i in range(-2, 3):
-
+                for angle in range(-3, 4):
                     bullet = EnemyBullet(
                         self.rect.centerx,
                         self.rect.centery,
-                        -8,
-                        i * 2
+                        -6,
+                        angle * 2
                     )
-
                     enemy_bullets.append(bullet)
 
-            # FAST SHOT
+            # =============================
+            # 🟠 HP ≤ 80 → LASERS + SINGLE
+            # =============================
+            elif self.hp > 60:
 
-            elif attack_type == 2:
+                current_time = pygame.time.get_ticks()
 
+                # 🔴 single shot blijft altijd
                 bullet = EnemyBullet(
                     self.rect.centerx,
                     self.rect.centery,
-                    -14,
+                    -10,
                     0
                 )
-
                 enemy_bullets.append(bullet)
 
-                if self.phase == 2 and self.hp <= 80 and self.hp > 60:
+                # 🟪 lasers alleen om de 3 seconden
+                if current_time - self.laser_timer > self.laser_cooldown:
+
+                    self.laser_timer = current_time
 
                     amount = 3
-                    gap = HOOGTE // amount  # ✅ verdeelt perfect over scherm
+                    lane_width = 80   # breedte tussen lasers
+
 
                     weak_index = random.randint(0, amount - 1)
 
                     for i in range(amount):
 
-                        y_pos = i * gap + 10   # kleine offset zodat het niet tegen de rand zit
+                        x_pos = self.rect.left - i * 120  # afstand tussen lasers
 
                         if i == weak_index:
-                            laser = WeakLaser(self.rect.left, y_pos)
+                            laser = WeakLaser(x_pos, 0)
                         else:
-                            laser = LaserWall(self.rect.left, y_pos)
+                            laser = LaserWall(x_pos, 0)
 
                         enemy_bullets.append(laser)
 
 
+            # =============================
+            # 🔴 HP ≤ 60 → DOODLE + ROCKETS
+            # =============================
+            elif self.hp > 40:
+
+                for _ in range(2):
+                    rocket = LockRocket(
+                        self.rect.centerx,
+                        self.rect.centery,
+                        player
+                    )
+                    enemy_bullets.append(rocket)
+
+            # =============================
+            # 🟣 HP ≤ 40 → BIG MODE
+            # =============================
+            else:
+
+                self.big_mode = True
+
+                # 🚀 alleen rockets (later komt 2e boss erbij)
+                for _ in range(3):
+                    rocket = LockRocket(
+                        self.rect.centerx,
+                        self.rect.centery,
+                        player
+                    )
+                    enemy_bullets.append(rocket)
 
 
 
@@ -891,32 +938,35 @@ class Boss:
         HitSound.play()
 
         self.hp -= 1
+
+        # ✅ PHASE 1 → DIRECT VERDWIJNEN + TRANSITION
+        if self.phase == 1 and self.hp <= 0:
+
+            # boss weg (kan player niet meer raken)
+            self.rect.x = -1000
+            self.rect.y = -1000
+
+            self.transition = True
+            self.transition_timer = pygame.time.get_ticks()
+
+            return  # ⛔ STOP → voorkomt dubbele code
+
+        # ✅ PHASE 2 EVENTS (blijft hetzelfde)
         if self.phase == 2:
+
             new_stage = (100 - self.hp) // 20
+
             if new_stage > self.phase2_stage:
                 self.phase2_stage = new_stage
                 self.phase2_event()
 
-
         print("Boss HP:", self.hp)
 
-        if self.hp <= 0:
+        # ✅ PHASE 2 → GAME WIN
+        if self.phase == 2 and self.hp <= 0:
 
-            # PHASE 2
-
-            if self.phase == 1:
-
-                self.transition = True
-
-                self.transition_timer = pygame.time.get_ticks()
-
-            # BOSS VERSLAGEN
-
-            elif self.phase == 2:
-
-                pygame.time.delay(1000)
-
-                end_screen("YOU WIN")
+            pygame.time.delay(1000)
+            end_screen("YOU WIN")
 
     def start_phase2(self):
 
@@ -1041,24 +1091,23 @@ def end_screen(text):
 
 class Game:
 
+
     def __init__(self):
 
         self.clock = pygame.time.Clock()
-
         self.running = True
 
         self.player = Player()
 
         self.boss = Boss()
+        self.boss.game = self  # ✅ KOPPELING VOOR DAMAGE LOCK
 
         self.bullets = []
-
         self.enemy_bullets = []
 
         self.font = pygame.font.SysFont(None, 80)
 
         self.bg_x = 0
-
         self.scroll_speed = 2
 
         self.lasers = []
@@ -1067,25 +1116,39 @@ class Game:
         self.god_mode = False
         self.debug_damage = False
 
+        # ✅ OUDE ROCKET FLAGS (mag blijven)
         self.spawned_75 = False
         self.spawned_70 = False
         self.spawned_65 = False
 
+        # ✅ DOODLEBOBS
         self.minis = []
         self.spawned_doodles = False
         self.last_doodle_spawn = 0
-        self.doodle_delay = 4000  # 4 seconden
+        self.doodle_delay = 4000
+
+        # ✅ NIEUW → TWEEDE BOSS
+        self.second_boss = None
+
+        # ✅ NIEUW → LOCK SYSTEM (optioneel voor debug)
+        self.doodlebob_alive = False
+
 
     
 
     def update(self):
+
+
+        self.doodlebob_alive = len(self.minis) > 0
+
 
         self.player.movement(self.boss.phase)
         self.player.shoot(self.bullets)
         self.player.super_attack(self.bullets)
 
         self.boss.update()
-        self.boss.attack(self.enemy_bullets)
+        self.boss.attack(self.enemy_bullets, self.minis, self.player)
+
 
 
         if self.boss.phase == 2:
@@ -1178,17 +1241,42 @@ class Game:
         if self.boss.phase == 2:
 
             # ✅ 75 HP → 1 rocket
-            if self.boss.hp <= 75 and not self.spawned_75:
+            # 🚀 rockets starten tegelijk met doodlebobs
+            if self.boss.phase == 2 and self.boss.hp <= 60:
 
-                rocket = LockRocket(
-                    self.boss.rect.centerx,
-                    self.boss.rect.centery,
-                    self.player
-                )
+                if not self.spawned_75:
 
-                self.rockets.append(rocket)
-                self.spawned_75 = True
-                print("Rocket 1 spawned")
+                    rocket = LockRocket(
+                        self.boss.rect.centerx,
+                        self.boss.rect.centery,
+                        self.player
+                    )
+
+                    self.rockets.append(rocket)
+                    self.spawned_75 = True
+
+                if not self.spawned_70:
+
+                    rocket = LockRocket(
+                        self.boss.rect.centerx,
+                        self.boss.rect.centery,
+                        self.player
+                    )
+
+                    self.rockets.append(rocket)
+                    self.spawned_70 = True
+
+                if not self.spawned_65:
+
+                    rocket = LockRocket(
+                        self.boss.rect.centerx,
+                        self.boss.rect.centery,
+                        self.player
+                    )
+
+                    self.rockets.append(rocket)
+                    self.spawned_65 = True
+
 
             # ✅ 70 HP → 2e rocket
             if self.boss.hp <= 70 and not self.spawned_70:
@@ -1322,6 +1410,37 @@ class Game:
             # ✅ verwijderen als dood
             if not mini.alive:
                 self.minis.remove(mini)
+        
+
+        if self.boss.phase == 2 and self.boss.hp <= 40:
+
+            self.minis.clear()  # ✅ doodlebobs weg
+
+            if self.second_boss is None:
+
+                self.second_boss = MiniDoodle(
+                    100,
+                    HOOGTE - 200,
+                    self.player
+                )
+
+                self.second_boss.moving = True
+                self.second_boss.speed_x = 0
+                self.second_boss.speed_y = 0
+
+                self.second_boss.boss_mode = True
+        
+        if self.second_boss:
+
+            if pygame.time.get_ticks() % 800 < 20:
+
+                rocket = LockRocket(
+                    self.second_boss.rect.centerx,
+                    self.second_boss.rect.centery,
+                    self.player
+                )
+
+                self.rockets.append(rocket)
 
 
         # =====================================
@@ -1457,6 +1576,9 @@ class Game:
         
         for mini in self.minis:
             mini.draw(frame)
+        
+        if self.second_boss:
+            self.second_boss.draw(frame)
 
 
         
