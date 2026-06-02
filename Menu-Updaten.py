@@ -321,56 +321,107 @@ class Player:
         toetsen = pygame.key.get_pressed()
 
         current_time = pygame.time.get_ticks()
+        if control_scheme == "AZERTY":
 
-        if toetsen[pygame.K_a]:
+            if toetsen[pygame.K_a]:
 
-            if current_time - self.last_super > self.super_cooldown:
+                if current_time - self.last_super > self.super_cooldown:
 
-                # MEGA MOVE
+                    # MEGA MOVE
 
-                if self.super_meter == 5:
+                    if self.super_meter == 5:
 
-                    mega_bullet = Bullet(
-                        self.rect.centerx,
-                        self.rect.centery,
-                        250,
-                        250,
-                        self.mega_image
-                    )
+                        mega_bullet = Bullet(
+                            self.rect.centerx,
+                            self.rect.centery,
+                            250,
+                            250,
+                            self.mega_image
+                        )
 
-                    mega_bullet.speed = 20
+                        mega_bullet.speed = 20
 
-                    mega_bullet.rect = self.mega_image.get_rect(
-                        center=self.rect.center
-                    )
+                        mega_bullet.rect = self.mega_image.get_rect(
+                            center=self.rect.center
+                        )
 
-                    bullets.append(mega_bullet)
+                        bullets.append(mega_bullet)
 
-                    self.super_meter = 0
+                        self.super_meter = 0
 
-                # NORMALE SUPER
+                    # NORMALE SUPER
 
-                elif self.super_meter >= 1:
+                    elif self.super_meter >= 1:
 
-                    super_bullet = Bullet(
-                        self.rect.centerx,
-                        self.rect.centery,
-                        120,
-                        120,
-                        self.super_image
-                    )
+                        super_bullet = Bullet(
+                            self.rect.centerx,
+                            self.rect.centery,
+                            120,
+                            120,
+                            self.super_image
+                        )
 
-                    super_bullet.speed = 18
+                        super_bullet.speed = 18
 
-                    super_bullet.rect = self.super_image.get_rect(
-                        center=self.rect.center
-                    )
+                        super_bullet.rect = self.super_image.get_rect(
+                            center=self.rect.center
+                        )
 
-                    bullets.append(super_bullet)
+                        bullets.append(super_bullet)
 
-                    self.super_meter -= 1
+                        self.super_meter -= 1
 
-                self.last_super = current_time
+                    self.last_super = current_time
+        else:
+            if toetsen[pygame.K_q]:
+
+                if current_time - self.last_super > self.super_cooldown:
+
+                    # MEGA MOVE
+
+                    if self.super_meter == 5:
+
+                        mega_bullet = Bullet(
+                            self.rect.centerx,
+                            self.rect.centery,
+                            250,
+                            250,
+                            self.mega_image
+                        )
+
+                        mega_bullet.speed = 20
+
+                        mega_bullet.rect = self.mega_image.get_rect(
+                            center=self.rect.center
+                        )
+
+                        bullets.append(mega_bullet)
+
+                        self.super_meter = 0
+
+                    # NORMALE SUPER
+
+                    elif self.super_meter >= 1:
+
+                        super_bullet = Bullet(
+                            self.rect.centerx,
+                            self.rect.centery,
+                            120,
+                            120,
+                            self.super_image
+                        )
+
+                        super_bullet.speed = 18
+
+                        super_bullet.rect = self.super_image.get_rect(
+                            center=self.rect.center
+                        )
+
+                        bullets.append(super_bullet)
+
+                        self.super_meter -= 1
+
+                    self.last_super = current_time
 
     def draw(self, screen):
 
@@ -1323,6 +1374,8 @@ def set_controls(value, scheme):
 
 
 
+
+
 class MainMenu:
 
     def __init__(self):
@@ -1331,31 +1384,46 @@ class MainMenu:
         self.background = pygame.image.load(
             r"TESTPYGAM_1._\achtergrond\Background_Menu\cuphead_00.png"
         )
-
         self.background = pygame.transform.scale(
             self.background,
             (BREEDTE, HOOGTE)
         )
 
+        # animatie
+        self.anim_time = 0
+
+        # 🎬 film grain
+        self.grain_surface = pygame.Surface((BREEDTE, HOOGTE))
+        self.grain_surface.set_alpha(25)
+
+        # ➤ selectie pijltje
+        self.arrow_font = pygame.font.SysFont(None, 60)
+
         # 🎨 THEME
         self.theme = pygame_menu.themes.THEME_SOLARIZED.copy()
-        self.theme.background_color = (0, 0, 0, 0)
 
+        self.theme.background_color = (0, 0, 0, 0)
         self.theme.title_background_color = (0, 0, 0, 0)
         self.theme.title_font_color = (0, 0, 0, 0)
 
-        self.theme.widget_background_color = (255, 255, 255)
+        # 🎨 betere kleuren (minder “clean”)
+        self.theme.widget_background_color = (240, 240, 240)
         self.theme.widget_font_color = (0, 0, 0)
+        self.theme.widget_background_color_hover = (255, 220, 100)
+        self.theme.widget_font_color_hover = (200, 0, 0)
+
         self.theme.widget_border_color = (0, 0, 0)
         self.theme.widget_border_width = 3
         self.theme.widget_border_radius = 15
         self.theme.widget_padding = 20
         self.theme.widget_font_size = 45
-        self.theme.widget_background_color_hover = (255, 200, 100)
 
-        # 🎮 MAIN MENU
+        self.theme.widget_width = 380
+        self.theme.widget_alignment = pygame_menu.locals.ALIGN_RIGHT
+        self.theme.widget_margin = (-10, 30)
+
+        # 🎮 MENU
         self.menu = pygame_menu.Menu('', BREEDTE, HOOGTE, theme=self.theme)
-        self.menu._center_content = False
 
         # ⚙️ SETTINGS MENU
         self.settings_menu = pygame_menu.Menu(
@@ -1373,54 +1441,74 @@ class MainMenu:
 
         self.settings_menu.add.button('BACK', pygame_menu.events.BACK)
 
-        # ✅ knoppen
-        self.start_btn = self.menu.add.button(
-            'START', start_game,
-            float=True, align=pygame_menu.locals.ALIGN_RIGHT
-        )
+        # ✅ KNOPPEN
+        self.menu.add.vertical_margin(100)
 
-        self.settings_btn = self.menu.add.button(
-            'SETTINGS', self.settings_menu,
-            float=True, align=pygame_menu.locals.ALIGN_RIGHT
-        )
+        self.menu.add.button('START', start_game)
+        self.menu.add.button('SETTINGS', self.settings_menu)
+        self.menu.add.button('QUIT', quit_game)
 
-        self.quit_btn = self.menu.add.button(
-            'QUIT', quit_game,
-            float=True, align=pygame_menu.locals.ALIGN_LEFT
-        )
+    # 🎬 film grain
+    def draw_grain(self):
 
-        self.update_positions()
+        self.grain_surface.fill((0, 0, 0))
 
-    def update_positions(self):
+        for _ in range(250):  # lager = subtieler
+            x = random.randint(0, BREEDTE - 1)
+            y = random.randint(0, HOOGTE - 1)
 
-        marge = 80
+            shade = random.randint(160, 255)
+            self.grain_surface.set_at((x, y), (shade, shade, shade))
 
-        # START rechts
-        self.start_btn.set_position(
-            BREEDTE - self.start_btn.get_width() - marge,
-            HOOGTE - 240
-        )
-
-        # SETTINGS rechts (onder start)
-        self.settings_btn.set_position(
-            BREEDTE - self.settings_btn.get_width() - marge,
-            HOOGTE - 200
-        )
-
-        # QUIT links
-        self.quit_btn.set_position(
-            marge,
-            HOOGTE - 200
-        )
-
+    # 🎮 DRAW
     def draw_background(self):
+
+        self.anim_time += 0.03
+
+        # 🎬 zachte beweging
+        bounce = math.sin(self.anim_time) * 3
+        shake_x = math.sin(self.anim_time * 2) * 1.2
+        shake_y = math.cos(self.anim_time * 2) * 1.2
+
         frame.fill((0, 0, 0))
-        frame.blit(self.background, (0, 0))
+
+        # 🎨 achtergrond
+        frame.blit(
+            self.background,
+            (int(shake_x), int(bounce + shake_y))
+        )
+
+        # 🌑 subtiele shadow (depth)
+        shadow = pygame.Surface((BREEDTE, HOOGTE))
+        shadow.set_alpha(30)
+        shadow.fill((0, 0, 0))
+        frame.blit(shadow, (2, 2))
+
+        # 🎬 film grain
+        self.draw_grain()
+        frame.blit(self.grain_surface, (0, 0))
+
+        # 🎯 selectie pijltje
+        selected = self.menu.get_current().get_selected_widget()
+
+        if selected:
+            rect = selected.get_rect()
+
+            arrow = self.arrow_font.render("->", True, (255, 255, 255))
+
+            frame.blit(
+                arrow,
+                (rect.x - 40, rect.y + 10)
+            )
 
     def run(self):
-        menusound.play(-1)
+
+        if not pygame.mixer.get_busy():
+            menusound.play(-1)
+
         self.menu.mainloop(frame, bgfun=self.draw_background)
 
 
+# START
 menu = MainMenu()
 menu.run()
