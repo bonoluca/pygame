@@ -188,6 +188,62 @@ class LockRocket:
         pygame.draw.rect(screen, (255, 80, 0), self.rect)
         pygame.draw.rect(screen, (255, 255, 0), self.rect, 3)
 
+
+class Spike:
+
+    def __init__(self, x, y):
+        self.x = x
+        self.base_y = y
+
+        self.max_height = 80
+        self.width = 40
+
+        self.rect = pygame.Rect(x, y, self.width, 0)
+
+        # ⚠️ eerst warning
+        self.warning_time = 600  # ms
+        self.spawn_time = pygame.time.get_ticks()
+
+        self.grow_speed = 20
+        self.duration = 2500
+
+        self.active = True
+        self.growing = False
+
+    def update(self):
+
+        current_time = pygame.time.get_ticks()
+
+        # ⏳ wachten
+        if not self.growing:
+            if current_time - self.spawn_time > self.warning_time:
+                self.growing = True
+            return
+
+        # 🌱 groeien
+        if self.rect.height < self.max_height:
+            self.rect.y -= self.grow_speed
+            self.rect.height += self.grow_speed
+
+        # ⌛ verdwijnen
+        if current_time - self.spawn_time > self.warning_time + self.duration:
+            self.active = False
+
+    def draw(self, screen):
+
+        current_time = pygame.time.get_ticks()
+
+        # ⚠️ warning tekenen
+        if not self.growing:
+            pygame.draw.rect(
+                screen,
+                (255, 0, 0),
+                (self.x, self.base_y - 10, self.width, 10)
+            )
+
+        else:
+            pygame.draw.rect(screen, (0, 255, 0), self.rect)
+
 # =====================================
 # PLAYER
 # =====================================
@@ -196,7 +252,8 @@ class Player:
 
     def __init__(self):
 
-        schaal = 1.2
+        
+        self.hitbox = pygame.Rect(0, 0, 25, 35)
 
         # SPRITE SHEET LADEN
         self.sprite_sheet = pygame.image.load(
@@ -231,12 +288,48 @@ class Player:
 
                 self.frames.append(frame)
 
+        # =====================================
+        # JET SPRITE (phase 2)
+        # =====================================
+
+        self.jet_sheet = pygame.image.load(
+            r"TESTPYGAM_1._\skins jet\llama rocket boots.png"
+        ).convert_alpha()
+
+        self.jet_frames = []
+
+        sheet_width = self.jet_sheet.get_width()
+        sheet_height = self.jet_sheet.get_height()
+
+        frame_width = sheet_width // 2
+        frame_height = sheet_height // 3
+
+        for row in range(3):
+            for col in range(2):
+
+                frame = self.jet_sheet.subsurface(
+                    pygame.Rect(
+                        col * frame_width,
+                        row * frame_height,
+                        frame_width,
+                        frame_height
+                    )
+                )
+
+                frame = pygame.transform.scale(frame, (100, 100))
+
+
+
+                self.jet_frames.append(frame)
+
 
         # animatie
         self.current_frame = 0
         self.animation_speed = 0.2
 
         self.image = self.frames[0]
+
+        self.current_frame_jet = 0
 
 
         self.super_image = pygame.image.load(
@@ -299,10 +392,10 @@ class Player:
     def movement(self, phase):
 
         toetsen = pygame.key.get_pressed()
-        moving = False   # ✅ BELANGRIJK
+        moving = False
 
         # =====================================
-        # PHASE 1
+        # PHASE 1 → LOPEN + SPRINGEN
         # =====================================
         if phase == 1:
 
@@ -331,7 +424,7 @@ class Player:
                 self.on_ground = True
 
         # =====================================
-        # PHASE 2
+        # PHASE 2 → VLIEGEN (JET)
         # =====================================
         else:
 
@@ -352,21 +445,36 @@ class Player:
                 moving = True
 
         # =====================================
-        # ANIMATIE (werkt voor beide fases)
+        # ANIMATIE SYSTEM
         # =====================================
-        if moving:
-            self.current_frame += self.animation_speed
+        if phase == 1:
 
-            if self.current_frame >= len(self.frames):
+            if moving:
+                self.current_frame += self.animation_speed
+
+                if self.current_frame >= len(self.frames):
+                    self.current_frame = 0
+
+                self.image = self.frames[int(self.current_frame)]
+            else:
                 self.current_frame = 0
+                self.image = self.frames[0]
 
-            self.image = self.frames[int(self.current_frame)]
         else:
-            self.current_frame = 0
-            self.image = self.frames[0]
+
+            if moving:
+                self.current_frame_jet += self.animation_speed
+
+                if self.current_frame_jet >= len(self.jet_frames):
+                    self.current_frame_jet = 0
+
+                self.image = self.jet_frames[int(self.current_frame_jet)]
+            else:
+                self.current_frame_jet = 0
+                self.image = self.jet_frames[0]
 
         # =====================================
-        # BOUNDARIES
+        # SCHERM GRENZEN
         # =====================================
         if self.rect.left < 0:
             self.rect.left = 0
@@ -379,6 +487,10 @@ class Player:
 
         if self.rect.bottom > HOOGTE:
             self.rect.bottom = HOOGTE
+        
+        # hitbox centreren in player
+        self.hitbox.center = self.rect.center
+
 
         
 
@@ -461,6 +573,7 @@ class Player:
                 self.last_super = current_time
 
     def draw(self, screen):
+        pygame.draw.rect(screen, (255, 0, 0), self.hitbox, 2)
 
         current_time = pygame.time.get_ticks()
 
@@ -626,7 +739,7 @@ class Boss:
         # =====================================
 
         self.phase = 1
-        self.hp = 10
+        self.hp = 100
 
         self.transition = False
         self.transition_timer = 0
@@ -646,19 +759,11 @@ class Boss:
         # =====================================
 
         if self.phase == 1:
-            # Alleen horizontaal bewegen
-            self.rect.x += self.speed_x
+            # boss blijft op vaste positie
+            self.rect.x = BREEDTE - self.rect.width - 50
+            self.rect.y = HOOGTE - self.rect.height - 120
 
-            # Botsen links/rechts
-            if self.rect.left <= 0 or self.rect.right >= BREEDTE:
-                self.speed_x *= -1  # richting omdraaien
-
-            # Binnen scherm houden
-            if self.rect.left < 0:
-                self.rect.left = 0
-
-            if self.rect.right > BREEDTE:
-                self.rect.right = BREEDTE
+                        
 
 
         # =====================================
@@ -695,7 +800,40 @@ class Boss:
             if self.phase == 2 and self.hp <= 60:
                 attack_type = 1  # ✅ ALTIJD multishot
             else:
-                attack_type = random.randint(1, 3)
+                attack_type = random.choice(["seed", "spike", "burst"])
+            
+
+            if attack_type == "seed":
+
+                bullet = EnemyBullet(
+                    self.rect.left,
+                    self.rect.centery,
+                    -8,
+                    random.randint(-2, 2)
+                )
+
+                enemy_bullets.append(bullet)
+            elif attack_type == "spike":
+
+                x_pos = random.randint(100, BREEDTE - 200)
+
+                spike = Spike(x_pos, HOOGTE - 120)
+
+                enemy_bullets.append(spike)
+            
+            elif attack_type == "burst":
+
+                for angle in range(-3, 4):
+
+                    bullet = EnemyBullet(
+                        self.rect.left,
+                        self.rect.centery,
+                        -6,
+                        angle * 2
+                    )
+
+                    enemy_bullets.append(bullet)
+
 
 
             # SPREAD SHOT
@@ -949,6 +1087,11 @@ class Game:
         self.boss.update()
         self.boss.attack(self.enemy_bullets)
 
+
+        if self.boss.phase == 2:
+            self.enemy_bullets = [
+                b for b in self.enemy_bullets if not isinstance(b, Spike)
+            ]
         # =====================================
         # PLAYER BULLETS
         # =====================================
@@ -1189,7 +1332,13 @@ class Game:
 
             bullet.update()
 
-            if bullet.rect.colliderect(self.player.rect):
+            # ✅ spike verwijderen als klaar
+            if isinstance(bullet, Spike) and not bullet.active:
+                self.enemy_bullets.remove(bullet)
+                continue
+
+            # collision player
+            if bullet.rect.colliderect(self.player.hitbox):
 
                 if current_time - self.player.last_hit > self.player.hit_cooldown:
                     if not self.god_mode:
@@ -1200,12 +1349,6 @@ class Game:
 
                 self.enemy_bullets.remove(bullet)
 
-            elif (
-                bullet.rect.right < 0
-                or bullet.rect.top > HOOGTE
-                or bullet.rect.bottom < 0
-            ):
-                self.enemy_bullets.remove(bullet)
 
         # =====================================
         # PLAYER CRASH (boss aanraken)
@@ -1280,6 +1423,7 @@ class Game:
             )
 
     def draw(self):
+        
 
         # BACKGROUND
 
@@ -1315,6 +1459,8 @@ class Game:
             mini.draw(frame)
 
 
+        
+        
         self.draw_ui()
 
         # PHASE TRANSITION
