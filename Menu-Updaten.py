@@ -11,6 +11,7 @@ pygame.init()
 # =====================================
 
 FPS = 60
+control_scheme = "AZERTY"
 
 # =====================================
 # BACKGROUND
@@ -252,17 +253,33 @@ class Player:
 
         toetsen = pygame.key.get_pressed()
 
-        if toetsen[pygame.K_q]:
-            self.rect.x -= self.speed
+        if control_scheme == "AZERTY":
 
-        if toetsen[pygame.K_d]:
-            self.rect.x += self.speed
+            if toetsen[pygame.K_q]:
+                self.rect.x -= self.speed
 
-        if toetsen[pygame.K_z]:
-            self.rect.y -= self.speed
+            if toetsen[pygame.K_d]:
+                self.rect.x += self.speed
 
-        if toetsen[pygame.K_s]:
-            self.rect.y += self.speed
+            if toetsen[pygame.K_z]:
+                self.rect.y -= self.speed
+
+            if toetsen[pygame.K_s]:
+                self.rect.y += self.speed
+
+        else:  # QWERTY
+
+            if toetsen[pygame.K_a]:
+                self.rect.x -= self.speed
+
+            if toetsen[pygame.K_d]:
+                self.rect.x += self.speed
+
+            if toetsen[pygame.K_w]:
+                self.rect.y -= self.speed
+
+            if toetsen[pygame.K_s]:
+                self.rect.y += self.speed
 
         # SCHERM GRENZEN
 
@@ -1298,11 +1315,19 @@ def quit_game():
 
 
 
+def set_controls(value, scheme):
+    global control_scheme
+    control_scheme = scheme
+    print("Controls ingesteld op:", control_scheme)
+
+
+
+
 class MainMenu:
 
     def __init__(self):
 
-        # 🎨 eigen achtergrond laden
+        # 🎨 achtergrond
         self.background = pygame.image.load(
             r"TESTPYGAM_1._\achtergrond\Background_Menu\cuphead_00.png"
         )
@@ -1312,21 +1337,81 @@ class MainMenu:
             (BREEDTE, HOOGTE)
         )
 
-        # 🎨 theme fix
+        # 🎨 THEME
         self.theme = pygame_menu.themes.THEME_SOLARIZED.copy()
         self.theme.background_color = (0, 0, 0, 0)
 
-        # 🎮 menu maken
-        self.menu = pygame_menu.Menu(
-            'Cuphead Boss Fight',
+        self.theme.title_background_color = (0, 0, 0, 0)
+        self.theme.title_font_color = (0, 0, 0, 0)
+
+        self.theme.widget_background_color = (255, 255, 255)
+        self.theme.widget_font_color = (0, 0, 0)
+        self.theme.widget_border_color = (0, 0, 0)
+        self.theme.widget_border_width = 3
+        self.theme.widget_border_radius = 15
+        self.theme.widget_padding = 20
+        self.theme.widget_font_size = 45
+        self.theme.widget_background_color_hover = (255, 200, 100)
+
+        # 🎮 MAIN MENU
+        self.menu = pygame_menu.Menu('', BREEDTE, HOOGTE, theme=self.theme)
+        self.menu._center_content = False
+
+        # ⚙️ SETTINGS MENU
+        self.settings_menu = pygame_menu.Menu(
+            'Settings',
             BREEDTE,
             HOOGTE,
             theme=self.theme
         )
 
-        # knoppen
-        self.menu.add.button('Start', start_game)
-        self.menu.add.button('Quit', quit_game)
+        self.settings_menu.add.selector(
+            'Controls: ',
+            [('AZERTY (Default)', "AZERTY"), ('QWERTY', "QWERTY")],
+            onchange=set_controls
+        )
+
+        self.settings_menu.add.button('BACK', pygame_menu.events.BACK)
+
+        # ✅ knoppen
+        self.start_btn = self.menu.add.button(
+            'START', start_game,
+            float=True, align=pygame_menu.locals.ALIGN_RIGHT
+        )
+
+        self.settings_btn = self.menu.add.button(
+            'SETTINGS', self.settings_menu,
+            float=True, align=pygame_menu.locals.ALIGN_RIGHT
+        )
+
+        self.quit_btn = self.menu.add.button(
+            'QUIT', quit_game,
+            float=True, align=pygame_menu.locals.ALIGN_LEFT
+        )
+
+        self.update_positions()
+
+    def update_positions(self):
+
+        marge = 80
+
+        # START rechts
+        self.start_btn.set_position(
+            BREEDTE - self.start_btn.get_width() - marge,
+            HOOGTE - 240
+        )
+
+        # SETTINGS rechts (onder start)
+        self.settings_btn.set_position(
+            BREEDTE - self.settings_btn.get_width() - marge,
+            HOOGTE - 200
+        )
+
+        # QUIT links
+        self.quit_btn.set_position(
+            marge,
+            HOOGTE - 200
+        )
 
     def draw_background(self):
         frame.fill((0, 0, 0))
