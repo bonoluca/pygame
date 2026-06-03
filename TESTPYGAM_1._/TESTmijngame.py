@@ -790,7 +790,7 @@ class Boss:
         self.big_mode = False
 
         self.laser_timer = 0
-        self.laser_cooldown = 3000  # 3000 ms = 3 seconden
+        self.laser_cooldown = 1500  # 3000 ms = 3 seconden
 
         self.rocket_timer = 0
         self.rocket_cooldown = 1500
@@ -900,9 +900,7 @@ class Boss:
             # =============================
             elif self.hp > 60:
 
-                current_time = pygame.time.get_ticks()
-
-                # 🔴 single shot blijft altijd
+                # 🔴 gewone kogel blijft altijd
                 bullet = EnemyBullet(
                     self.rect.centerx,
                     self.rect.centery,
@@ -911,30 +909,29 @@ class Boss:
                 )
                 enemy_bullets.append(bullet)
 
-                # 🟪 lasers alleen om de 3 seconden
+                current_time = pygame.time.get_ticks()
+
+                # 🔷 ALLEEN lasers na cooldown
                 if current_time - self.laser_timer > self.laser_cooldown:
 
                     self.laser_timer = current_time
 
-                # aantal lanes = verticaal (boven → onder)
-                lanes = 4
-                lane_height = HOOGTE // lanes
+                    lanes = 4
+                    lane_height = HOOGTE // lanes
+                    weak_index = random.randint(0, lanes - 1)
 
-                weak_index = random.randint(0, lanes - 1)
+                    for i in range(lanes):
 
-                for i in range(lanes):
+                        y_pos = i * lane_height
 
-                    y_pos = i * lane_height
+                        if i == weak_index:
+                            laser = WeakLaser(self.rect.left, y_pos)
+                        else:
+                            laser = LaserWall(self.rect.left, y_pos)
 
-                    if i == weak_index:
-                        laser = WeakLaser(self.rect.left, y_pos)
-                    else:
-                        laser = LaserWall(self.rect.left, y_pos)
+                        laser.rect.height = lane_height
+                        enemy_bullets.append(laser)
 
-                    # ✅ BELANGRIJK → maak hoogte van elke laser = lane
-                    laser.rect.height = lane_height
-
-                    enemy_bullets.append(laser)
 
 
             # =============================
@@ -962,15 +959,23 @@ class Boss:
 
                 self.big_mode = True
 
-                # 🚀 alleen rockets (later komt 2e boss erbij)
-                for _ in range(3):
-                    rocket = LockRocket(
-                        self.rect.centerx,
-                        self.rect.centery,
-                        player
-                    )
+                current_time = pygame.time.get_ticks()
 
-                    self.game.rockets.append(rocket)
+                if current_time - self.rocket_timer > 800:
+
+                    self.rocket_timer = current_time
+
+                    for i in range(3):
+
+                        offset = (i - 1) * 50  # links, midden, rechts
+
+                        rocket = LockRocket(
+                            self.rect.centerx,
+                            self.rect.centery + offset,
+                            player
+                        )
+
+                        self.game.rockets.append(rocket)
 
 
 
@@ -1173,6 +1178,8 @@ class Game:
 
         # ✅ NIEUW → LOCK SYSTEM (optioneel voor debug)
         self.doodlebob_alive = False
+
+        self.second_rocket_timer = 0
 
 
     
@@ -1436,21 +1443,44 @@ class Game:
 
             if self.second_boss is None:
 
+                x_pos = 100   # 🔥 links op scherm
+                y_pos = self.boss.rect.y
+
                 self.second_boss = MiniDoodle(
-                    100,
-                    HOOGTE - 200,
+                    x_pos,
+                    y_pos,
                     self.player
                 )
+                self.second_boss.image = pygame.transform.scale(
+                    self.second_boss.image,
+                    (
+                        self.boss.image.get_width(),
+                        self.boss.image.get_height()
+                    )
+                )
 
-                self.second_boss.moving = True
+                self.second_boss.rect = self.second_boss.image.get_rect(
+                    topleft=(x_pos, y_pos)
+                )
+
+                self.second_boss.moving = False
                 self.second_boss.speed_x = 0
                 self.second_boss.speed_y = 0
+                self.second_boss.boss_mode = True
+
+
+
+ 
 
                 self.second_boss.boss_mode = True
         
         if self.second_boss:
 
-            if pygame.time.get_ticks() % 800 < 20:
+            current_time = pygame.time.get_ticks()
+
+            if current_time - self.second_rocket_timer > 1200:
+
+                self.second_rocket_timer = current_time
 
                 rocket = LockRocket(
                     self.second_boss.rect.centerx,
