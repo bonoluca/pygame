@@ -60,7 +60,7 @@ HitSound = pygame.mixer.Sound(
 )
 
 GunSound = pygame.mixer.Sound(
-    r'TESTPYGAM_1._\sfx\peachooter.mp3'
+    r'TESTPYGAM_1._\sfx\pew sound.wav'
 )
 
 CrashSound = pygame.mixer.Sound(
@@ -160,41 +160,46 @@ class LockRocket:
         self.target = target
         self.rect = pygame.Rect(x, y, 50, 30)
 
-        self.target_x = target.rect.centerx
-        self.target_y = target.rect.centery
+        self.speed = 3.5
+        self.turn_speed = 0.08
 
-        self.speed = 7
-
-        dx = self.target_x - x
-        dy = self.target_y - y
-        dist = math.hypot(dx, dy)
-
-        if dist != 0:
-            self.speed_x = (dx / dist) * self.speed
-            self.speed_y = (dy / dist) * self.speed
-        else:
-            self.speed_x = 0
-            self.speed_y = 0
-
+        self.delay = 1000
         self.spawn_time = pygame.time.get_ticks()
-    
-    def should_destroy(self):
-        return pygame.time.get_ticks() - self.spawn_time > 12000
 
-    
+        self.speed_x = -5
+        self.speed_y = 0
+
+    def should_destroy(self):
+        return pygame.time.get_ticks() - self.spawn_time > 4000
+
     def update(self):
 
+        current_time = pygame.time.get_ticks()
+
+        # eerst recht vliegen
+        if current_time - self.spawn_time < self.delay:
+            self.rect.x += self.speed_x
+            return
+
+        # target volgen
         dx = self.target.rect.centerx - self.rect.centerx
         dy = self.target.rect.centery - self.rect.centery
-
         dist = math.hypot(dx, dy)
 
         if dist != 0:
-            self.speed_x = (dx / dist) * self.speed
-            self.speed_y = (dy / dist) * self.speed
+            target_vx = (dx / dist) * self.speed
+            target_vy = (dy / dist) * self.speed
+
+            self.speed_x += (target_vx - self.speed_x) * self.turn_speed
+            self.speed_y += (target_vy - self.speed_y) * self.turn_speed
 
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
+
+    def draw(self, screen):
+        pygame.draw.rect(screen, (255, 120, 0), self.rect)
+        pygame.draw.rect(screen, (255, 255, 0), self.rect, 2)
+
 
 
 class Spike:
@@ -396,6 +401,9 @@ class Player:
         self.jump_power = -10
         self.on_ground = False
 
+        self.direction = 1  # 1 = rechts, -1 = links
+
+
 
     def movement(self, phase):
 
@@ -409,11 +417,14 @@ class Player:
 
             if toetsen[pygame.K_q]:
                 self.rect.x -= self.speed
+                self.direction = -1
                 moving = True
 
             if toetsen[pygame.K_d]:
                 self.rect.x += self.speed
+                self.direction = 1
                 moving = True
+
 
             # springen
             if toetsen[pygame.K_z] and self.on_ground:
@@ -438,11 +449,14 @@ class Player:
 
             if toetsen[pygame.K_q]:
                 self.rect.x -= self.speed
+                self.direction = -1
                 moving = True
 
             if toetsen[pygame.K_d]:
                 self.rect.x += self.speed
+                self.direction = 1
                 moving = True
+
 
             if toetsen[pygame.K_z]:
                 self.rect.y -= self.speed
@@ -515,10 +529,18 @@ class Player:
 
                 GunSound.play()
 
+                if self.direction == 1:
+                    x = self.rect.right
+                else:
+                    x = self.rect.left
+
                 bullet = Bullet(
-                    self.rect.centerx,
+                    x,
                     self.rect.centery
                 )
+
+                bullet.speed = 12 * self.direction
+
 
                 bullets.append(bullet)
 
@@ -592,7 +614,13 @@ class Player:
             if current_time % 200 < 100:
                 return
 
-        screen.blit(self.image, self.rect)
+        image = self.image
+
+        if self.direction == -1:
+            image = pygame.transform.flip(self.image, True, False)
+
+        screen.blit(image, self.rect)
+
 
 # =====================================
 # BOSS
@@ -660,17 +688,18 @@ class MiniDoodle:
             self.rect.y += self.speed_y
 
         # ✅ schieten
-        if current_time - self.last_shot > self.shot_cooldown:
+        if current_time - self.last_shot > self.shot_cooldown and not hasattr(self, "boss_mode"):
+
 
             dx = self.target.rect.centerx - self.rect.centerx
             dy = self.target.rect.centery - self.rect.centery
             dist = math.hypot(dx, dy)
 
             if dist != 0:
-                speed_x = (dx / dist) * 6
-                speed_y = (dy / dist) * 6
+                speed_x = (dx / dist) * 5
+                speed_y = (dy / dist) * 5
             else:
-                speed_x = -6
+                speed_x = -5
                 speed_y = 0
 
             bullet = EnemyBullet(
@@ -722,8 +751,8 @@ class Boss:
         self.image_phase2 = pygame.transform.scale(
             self.image_phase2,
             (
-                self.image_phase2.get_width() // 4,
-                self.image_phase2.get_height() // 4
+                self.image_phase2.get_width() // 5,
+                self.image_phase2.get_height() // 5
             )
         )
 
@@ -762,6 +791,9 @@ class Boss:
 
         self.laser_timer = 0
         self.laser_cooldown = 3000  # 3000 ms = 3 seconden
+
+        self.rocket_timer = 0
+        self.rocket_cooldown = 1500
 
     def update(self):
 
@@ -910,14 +942,19 @@ class Boss:
             # =============================
             elif self.hp > 40:
 
-                for _ in range(2):
+                current_time = pygame.time.get_ticks()
+
+                if current_time - self.rocket_timer > self.rocket_cooldown:
+
+                    self.rocket_timer = current_time
+
                     rocket = LockRocket(
                         self.rect.centerx,
                         self.rect.centery,
                         player
                     )
-                    enemy_bullets.append(rocket)
 
+                    self.game.rockets.append(rocket)
             # =============================
             # 🟣 HP ≤ 40 → BIG MODE
             # =============================
@@ -932,7 +969,8 @@ class Boss:
                         self.rect.centery,
                         player
                     )
-                    enemy_bullets.append(rocket)
+
+                    self.game.rockets.append(rocket)
 
 
 
@@ -1241,71 +1279,38 @@ class Game:
         # ROCKET SPAWN ✅ (NA DAMAGE!)
         # =====================================
 
-        if self.boss.phase == 2:
+        if self.boss.phase == 2 and self.boss.hp <= 60:
 
-            # ✅ 75 HP → 1 rocket
-            # 🚀 rockets starten tegelijk met doodlebobs
-            if self.boss.phase == 2 and self.boss.hp <= 60:
-
-                if not self.spawned_75:
-
-                    rocket = LockRocket(
-                        self.boss.rect.centerx,
-                        self.boss.rect.centery,
-                        self.player
-                    )
-
-                    self.rockets.append(rocket)
-                    self.spawned_75 = True
-
-                if not self.spawned_70:
-
-                    rocket = LockRocket(
-                        self.boss.rect.centerx,
-                        self.boss.rect.centery,
-                        self.player
-                    )
-
-                    self.rockets.append(rocket)
-                    self.spawned_70 = True
-
-                if not self.spawned_65:
-
-                    rocket = LockRocket(
-                        self.boss.rect.centerx,
-                        self.boss.rect.centery,
-                        self.player
-                    )
-
-                    self.rockets.append(rocket)
-                    self.spawned_65 = True
-
-
-            # ✅ 70 HP → 2e rocket
-            if self.boss.hp <= 70 and not self.spawned_70:
-
+            if not self.spawned_75:
                 rocket = LockRocket(
                     self.boss.rect.centerx,
                     self.boss.rect.centery,
                     self.player
                 )
+                self.rockets.append(rocket)
+                self.spawned_75 = True
 
+            if not self.spawned_70:
+                rocket = LockRocket(
+                    self.boss.rect.centerx,
+                    self.boss.rect.centery,
+                    self.player
+                )
                 self.rockets.append(rocket)
                 self.spawned_70 = True
-                print("Rocket 2 spawned")
 
-            # ✅ 65 HP → 3e rocket
-            if self.boss.hp <= 65 and not self.spawned_65:
-
+            if not self.spawned_65:
                 rocket = LockRocket(
                     self.boss.rect.centerx,
                     self.boss.rect.centery,
                     self.player
                 )
-
                 self.rockets.append(rocket)
                 self.spawned_65 = True
-                print("Rocket 3 spawned")
+            
+
+        
+        
 
         
         # =====================================
@@ -1391,6 +1396,16 @@ class Game:
 
             elif rocket.should_destroy():
                 self.rockets.remove(rocket)
+            
+            
+            elif (
+                    rocket.rect.right < 0
+                    or rocket.rect.left > BREEDTE
+                    or rocket.rect.top < 0
+                    or rocket.rect.bottom > HOOGTE
+                ):
+                    self.rockets.remove(rocket)
+
 
         
         # =====================================
