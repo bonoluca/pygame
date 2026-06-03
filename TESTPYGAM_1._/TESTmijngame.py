@@ -134,8 +134,8 @@ class EnemyBullet:
 class LaserWall:
 
     def __init__(self, x, y):
-        self.rect = pygame.Rect(x, 0, 40, HOOGTE)
-        self.speed = -4
+        self.rect = pygame.Rect(x, y, 40, 100)
+        self.speed = -7
 
     def update(self):
         self.rect.x += self.speed
@@ -884,22 +884,25 @@ class Boss:
 
                     self.laser_timer = current_time
 
-                    amount = 3
-                    lane_width = 80   # breedte tussen lasers
+                # aantal lanes = verticaal (boven → onder)
+                lanes = 4
+                lane_height = HOOGTE // lanes
 
+                weak_index = random.randint(0, lanes - 1)
 
-                    weak_index = random.randint(0, amount - 1)
+                for i in range(lanes):
 
-                    for i in range(amount):
+                    y_pos = i * lane_height
 
-                        x_pos = self.rect.left - i * 120  # afstand tussen lasers
+                    if i == weak_index:
+                        laser = WeakLaser(self.rect.left, y_pos)
+                    else:
+                        laser = LaserWall(self.rect.left, y_pos)
 
-                        if i == weak_index:
-                            laser = WeakLaser(x_pos, 0)
-                        else:
-                            laser = LaserWall(x_pos, 0)
+                    # ✅ BELANGRIJK → maak hoogte van elke laser = lane
+                    laser.rect.height = lane_height
 
-                        enemy_bullets.append(laser)
+                    enemy_bullets.append(laser)
 
 
             # =============================
