@@ -1649,6 +1649,21 @@ class Game:
 
             self.draw()
 
+
+def fade(screen, width, height, speed=5):
+
+    fade_surface = pygame.Surface((width, height))
+    fade_surface.fill((0, 0, 0))
+
+    for alpha in range(0, 255, speed):
+
+        fade_surface.set_alpha(alpha)
+
+        screen.blit(fade_surface, (0, 0))
+        pygame.display.update()
+
+        pygame.time.delay(10)
+
 # =====================================
 # START GAME
 # =====================================
@@ -1662,6 +1677,11 @@ def start_game():
     game.run()
 
 
+def start_with_fade():
+
+    fade(frame, BREEDTE, HOOGTE)  # 🎬 fade eerst
+
+    start_game()  # start daarna game
 
 def quit_game():
 
@@ -1670,18 +1690,143 @@ def quit_game():
     sys.exit()
 
 
+def set_controls(value, scheme):
+    global control_scheme
+    control_scheme = scheme
+    print("Controls ingesteld op:", control_scheme)
 
-menu = pygame_menu.Menu(
-    'Cuphead Boss Fight',
-    BREEDTE,
-    HOOGTE,
-    theme=pygame_menu.themes.THEME_SOLARIZED
-)
+class MainMenu:
 
-menusound.play(-1)
+    def __init__(self):
 
-menu.add.button('Start', start_game)
+        # 🎨 achtergrond
+        self.background = pygame.image.load(
+            r"TESTPYGAM_1._\achtergrond\Background_Menu\cuphead_00.png"
+        )
+        self.background = pygame.transform.scale(
+            self.background,
+            (BREEDTE, HOOGTE)
+        )
 
-menu.add.button('Quit', quit_game)
+        # animatie
+        self.anim_time = 0
 
-menu.mainloop(frame)
+        # 🎬 film grain
+        self.grain_surface = pygame.Surface((BREEDTE, HOOGTE))
+        self.grain_surface.set_alpha(25)
+
+        # ➤ selectie pijltje
+        self.arrow_font = pygame.font.SysFont(None, 60)
+
+        # 🎨 THEME
+        self.theme = pygame_menu.themes.THEME_SOLARIZED.copy()
+
+        self.theme.background_color = (0, 0, 0, 0)
+        self.theme.title_background_color = (0, 0, 0, 0)
+        self.theme.title_font_color = (0, 0, 0, 0)
+
+        # 🎨 betere kleuren (minder “clean”)
+        self.theme.widget_background_color = (240, 240, 240)
+        self.theme.widget_font_color = (0, 0, 0)
+        self.theme.widget_background_color_hover = (255, 220, 100)
+        self.theme.widget_font_color_hover = (200, 0, 0)
+
+        self.theme.widget_border_color = (0, 0, 0)
+        self.theme.widget_border_width = 3
+        self.theme.widget_border_radius = 15
+        self.theme.widget_padding = 20
+        self.theme.widget_font_size = 45
+
+        self.theme.widget_width = 380
+        self.theme.widget_alignment = pygame_menu.locals.ALIGN_RIGHT
+        self.theme.widget_margin = (-10, 30)
+
+        # 🎮 MENU
+        self.menu = pygame_menu.Menu('', BREEDTE, HOOGTE, theme=self.theme)
+
+        # ⚙️ SETTINGS MENU
+        self.settings_menu = pygame_menu.Menu(
+            'Settings',
+            BREEDTE,
+            HOOGTE,
+            theme=self.theme
+        )
+
+        self.settings_menu.add.selector(
+            'Controls: ',
+            [('AZERTY (Default)', "AZERTY"), ('QWERTY', "QWERTY")],
+            onchange=set_controls
+        )
+
+        self.settings_menu.add.button('BACK', pygame_menu.events.BACK)
+
+        # ✅ KNOPPEN
+        self.menu.add.vertical_margin(100)
+
+        self.menu.add.button('START', start_with_fade)
+        self.menu.add.button('SETTINGS', self.settings_menu)
+        self.menu.add.button('QUIT', quit_game)
+
+    # 🎬 film grain
+    def draw_grain(self):
+
+        self.grain_surface.fill((0, 0, 0))
+
+        for _ in range(250):  # lager = subtieler
+            x = random.randint(0, BREEDTE - 1)
+            y = random.randint(0, HOOGTE - 1)
+
+            shade = random.randint(160, 255)
+            self.grain_surface.set_at((x, y), (shade, shade, shade))
+
+    # 🎮 DRAW
+    def draw_background(self):
+
+        self.anim_time += 0.03
+
+        # 🎬 zachte beweging
+        bounce = math.sin(self.anim_time) * 3
+        shake_x = math.sin(self.anim_time * 2) * 1.2
+        shake_y = math.cos(self.anim_time * 2) * 1.2
+
+        frame.fill((0, 0, 0))
+
+        # 🎨 achtergrond
+        frame.blit(
+            self.background,
+            (int(shake_x), int(bounce + shake_y))
+        )
+
+        # 🌑 subtiele shadow (depth)
+        shadow = pygame.Surface((BREEDTE, HOOGTE))
+        shadow.set_alpha(30)
+        shadow.fill((0, 0, 0))
+        frame.blit(shadow, (2, 2))
+
+        # 🎬 film grain
+        self.draw_grain()
+        frame.blit(self.grain_surface, (0, 0))
+
+        # 🎯 selectie pijltje
+        selected = self.menu.get_current().get_selected_widget()
+
+        if selected:
+            rect = selected.get_rect()
+
+            arrow = self.arrow_font.render("->", True, (255, 255, 255))
+
+            frame.blit(
+                arrow,
+                (rect.x - 40, rect.y + 10)
+            )
+
+    def run(self):
+
+        if not pygame.mixer.get_busy():
+            menusound.play(-1)
+
+        self.menu.mainloop(frame, bgfun=self.draw_background)
+
+# START
+menu = MainMenu()
+menu.run()
