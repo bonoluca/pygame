@@ -814,6 +814,9 @@ class Boss:
         self.rocket_timer = 0
         self.rocket_cooldown = 2500
 
+        self.final_form = False
+        self.game = None
+
         
 
     def update(self):
@@ -852,6 +855,47 @@ class Boss:
                     self.direction = -1
 
                 self.rect.x = BREEDTE - self.rect.width - 50
+        
+        # =========================
+        # FINAL FORM (PATRICK)
+        # =========================
+        if self.phase == 2 and self.hp <= 40 and not self.final_form:
+
+            self.game.minis.clear()
+
+
+            print("FINAL FORM ACTIVATED")
+
+            self.final_form = True
+            self.attack_timer = pygame.time.get_ticks()
+
+            # ✅ nieuwe afbeelding
+            self.image = pygame.image.load(
+                r"TESTPYGAM_1._\boss skin\patrick boos.png"
+            ).convert_alpha()
+
+            # ✅ originele grootte behouden
+            orig_width = self.image.get_width()
+            orig_height = self.image.get_height()
+
+            # ✅ schaal factor (pas dit aan!)
+            scale = 0.6
+
+            new_width = int(orig_width * scale)
+            new_height = int(orig_height * scale)
+
+            self.image = pygame.transform.scale(
+                self.image,
+                (new_width, new_height)
+            )
+
+            # ✅ positie rechts midden
+            self.rect = self.image.get_rect(
+                center=(BREEDTE - 200, HOOGTE // 2)
+            )
+
+            # ✅ behavior reset
+            self.attack_cooldown = 700
 
 
     def attack(self, enemy_bullets, minis, player, rockets):
@@ -976,30 +1020,33 @@ class Boss:
 
                         self.rocket_timer = current_time
             # =============================
-            # 🟣 HP ≤ 40 → BIG MODE
+            # 🟣 HP ≤ 40 → FINAL ATTACK
             # =============================
             else:
 
-                self.big_mode = True
+                # ✅ FINAL STAGE ATTACK (TRIPLE SPREAD)
 
-                current_time = pygame.time.get_ticks()
+                angles = [-15, 0, 15]
 
-                if current_time - self.rocket_timer > 800:
+                for angle in angles:
 
-                    self.rocket_timer = current_time
+                    radians = math.radians(angle)
 
-                    for i in range(3):
+                    speed = 6
 
-                        offset = (i - 1) * 50  # links, midden, rechts
+                    speed_x = -speed  # altijd naar links
+                    speed_y = math.sin(radians) * speed
 
-                        rocket = LockRocket(
-                            self.rect.centerx,
-                            self.rect.centery + offset,
-                            player
-                        )
+                    bullet = EnemyBullet(
+                        self.rect.centerx,
+                        self.rect.centery,
+                        speed_x,
+                        speed_y
+                    )
 
-                        if len(rockets) < 4:
-                            rockets.append(rocket)
+                    enemy_bullets.append(bullet)
+
+            
 
 
 
@@ -1074,7 +1121,7 @@ class Boss:
 
             print("STAGE 2: BOSS WORDT GROOT EN STIL")
 
-            self.attack_cooldown = 700
+            self.attack_cooldown = 1100
             self.big_mode = True
 
 
@@ -1282,7 +1329,7 @@ class Game:
         # ================================
         # ✅ DOODLEBOB SPAWN (FIX)
         # ================================
-        if self.boss.phase == 2 and self.boss.hp <= 60 and not self.spawned_doodles:
+        if self.boss.phase == 2 and 60 >= self.boss.hp > 40 and not self.spawned_doodles:
 
             print("DoodleBobs spawned 😈")
 
@@ -1315,7 +1362,7 @@ class Game:
         # ================================
         alive_minis = [m for m in self.minis if m.alive]
 
-        if self.boss.phase == 2 and self.boss.hp <= 60:
+        if self.boss.phase == 2 and 60 >= self.boss.hp > 40:
 
             if len(alive_minis) == 0 and current_time - self.last_doodle_spawn > self.doodle_delay:
 
