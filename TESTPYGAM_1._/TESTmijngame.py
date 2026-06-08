@@ -671,7 +671,55 @@ class MiniDoodle:
 
         self.entering = False   # ✅ nog niet in beeld
 
+        self.mode = "normal"
+
+        # FINAL MODE
+        self.attack_done = False
+        self.wait_timer = 0
+
+
     def update(self, enemy_bullets):
+
+        # =========================
+        # FINAL MODE BEHAVIOR
+        # =========================
+        if self.mode == "final":
+
+            current_time = pygame.time.get_ticks()
+
+            # ====================
+            # FASE 1 → inkomen
+            # ====================
+            target_x = BREEDTE - 500
+
+            if not self.attack_done:
+
+                if self.rect.x > target_x:
+                    self.rect.x -= 6
+                    return None
+
+                # eenmaal op positie → rocket
+                self.attack_done = True
+                self.wait_timer = current_time
+                return "shoot_rocket"
+
+            # ====================
+            # FASE 2 → korte pause
+            # ====================
+            if current_time - self.wait_timer < 1200:
+                return None
+
+            # ====================
+            # FASE 3 → weg dashen ✅
+            # ====================
+            self.rect.x += 12
+            self.rect.y += math.sin(current_time * 0.01) * 3
+
+            if self.rect.left > BREEDTE:
+                self.alive = False
+
+            return None
+
 
        
 
@@ -738,114 +786,112 @@ class MiniDoodle:
     def draw(self, screen):
         screen.blit(self.image, self.rect)
 
-class Boss:
+    class Boss:
 
-    def __init__(self):
+        def __init__(self):
 
-        schaal = 0.15
+            schaal = 0.15
 
-        self.speed_x = random.choice([-5, 5])
-        self.speed_y = random.choice([-3, 3])
+            self.speed_x = random.choice([-5, 5])
+            self.speed_y = random.choice([-3, 3])
 
-        # =====================================
-        # IMAGES
-        # =====================================
+            # =====================================
+            # IMAGES
+            # =====================================
 
-        self.image_phase1 = pygame.image.load(
-            r"TESTPYGAM_1._\DoodleBob_Stock_Art.webp"
-        )
-
-        self.image_phase1 = pygame.transform.scale(
-            self.image_phase1,
-            (
-                int(self.image_phase1.get_width() * schaal),
-                int(self.image_phase1.get_height() * schaal)
+            self.image_phase1 = pygame.image.load(
+                r"TESTPYGAM_1._\DoodleBob_Stock_Art.webp"
             )
-        )
 
-        self.image_phase2 = pygame.image.load(
-            r"TESTPYGAM_1._\Bikini-Patrick.png"
-        )
-
-        self.image_phase2 = pygame.transform.scale(
-            self.image_phase2,
-            (
-                self.image_phase2.get_width() // 5,
-                self.image_phase2.get_height() // 5
+            self.image_phase1 = pygame.transform.scale(
+                self.image_phase1,
+                (
+                    int(self.image_phase1.get_width() * schaal),
+                    int(self.image_phase1.get_height() * schaal)
+                )
             )
-        )
 
-        self.image = self.image_phase1
+            self.image_phase2 = pygame.image.load(
+                r"TESTPYGAM_1._\Bikini-Patrick.png"
+            )
 
-        # =====================================
-        # SPAWN
-        # =====================================
+            self.image_phase2 = pygame.transform.scale(
+                self.image_phase2,
+                (
+                    self.image_phase2.get_width() // 5,
+                    self.image_phase2.get_height() // 5
+                )
+            )
 
-        self.rect = self.image.get_rect()
+            self.image = self.image_phase1
 
-        self.rect.x = BREEDTE - self.rect.width - 50
+            # =====================================
+            # SPAWN
+            # =====================================
 
-        self.rect.y = random.randint(
-            50,
-            HOOGTE - self.rect.height - 50
-        )
+            self.rect = self.image.get_rect()
 
-        # =====================================
-        # GAME LOGIC
-        # =====================================
+            self.rect.x = BREEDTE - self.rect.width - 50
 
-        self.phase = 1
-        self.hp = 100
+            self.rect.y = random.randint(
+                50,
+                HOOGTE - self.rect.height - 50
+            )
 
-        self.transition = False
-        self.transition_timer = 0
+            # =====================================
+            # GAME LOGIC
+            # =====================================
 
-        self.attack_timer = 0
-        self.attack_cooldown = 1200
+            self.phase = 1
+            self.hp = 100
 
-        self.direction = 1
+            self.transition = False
+            self.transition_timer = 0
 
-        self.phase2_stage = 0
-        self.big_mode = False
+            self.attack_timer = 0
+            self.attack_cooldown = 1200
 
-        self.laser_timer = 0
-        self.laser_cooldown = 1500  # 3000 ms = 3 seconden
+            self.direction = 1
 
-        self.rocket_timer = 0
-        self.rocket_cooldown = 2500
+            self.phase2_stage = 0
+            self.big_mode = False
 
-        self.final_form = False
-        self.game = None
+            self.laser_timer = 0
+            self.laser_cooldown = 1500  # 3000 ms = 3 seconden
 
-        
+            self.rocket_timer = 0
+            self.rocket_cooldown = 2500
 
-    def update(self):
+            self.final_form = False
+            self.game = None
+            
+            # ✅ TRANSFORM VARS (hier toevoegen!)
+            self.transforming = False
+            self.transform_phase = 0
+            self.transform_y_target = HOOGTE + 20
+
+
+            
+
+        def update(self):
 
         # =====================================
         # PHASE 1
         # =====================================
-
         if self.phase == 1:
-            # boss blijft op vaste positie
             self.rect.x = BREEDTE - self.rect.width - 50
             self.rect.y = HOOGTE - self.rect.height - 120
-
-                        
-
 
         # =====================================
         # PHASE 2
         # =====================================
-
         elif self.phase == 2:
 
             if self.big_mode:
-                # ✅ blijft stil in het midden rechts
                 self.rect.x = BREEDTE - self.rect.width - 50
                 self.rect.y = HOOGTE // 2 - self.rect.height // 2
 
             else:
-                # oude beweging
                 self.rect.y += self.direction * 5
 
                 if self.rect.top <= 0:
@@ -855,47 +901,73 @@ class Boss:
                     self.direction = -1
 
                 self.rect.x = BREEDTE - self.rect.width - 50
-        
+
         # =========================
-        # FINAL FORM (PATRICK)
+        # START TRANSFORM
         # =========================
-        if self.phase == 2 and self.hp <= 40 and not self.final_form:
+        if self.phase == 2 and self.hp <= 40 and not self.final_form and not self.transforming:
+
+            print("START TRANSFORM")
 
             self.game.minis.clear()
 
+            self.transforming = True
+            self.transform_phase = 1
 
-            print("FINAL FORM ACTIVATED")
-
-            self.final_form = True
+            # ❌ geen image change hier!
             self.attack_timer = pygame.time.get_ticks()
 
-            # ✅ nieuwe afbeelding
-            self.image = pygame.image.load(
-                r"TESTPYGAM_1._\boss skin\patrick boos.png"
-            ).convert_alpha()
+        # =========================
+        # TRANSFORM ANIMATIE
+        # =========================
+        if self.transforming:
 
-            # ✅ originele grootte behouden
-            orig_width = self.image.get_width()
-            orig_height = self.image.get_height()
+            # ⬇️ FASE 1 → naar beneden verdwijnen
+            if self.transform_phase == 1:
 
-            # ✅ schaal factor (pas dit aan!)
-            scale = 0.6
+                self.rect.y += 8
 
-            new_width = int(orig_width * scale)
-            new_height = int(orig_height * scale)
+                if self.rect.top > HOOGTE:
+                    self.transform_phase = 2
 
-            self.image = pygame.transform.scale(
-                self.image,
-                (new_width, new_height)
-            )
+                    # ✅ NU PAS NIEUWE IMAGE
+                    self.image = pygame.image.load(
+                        r"TESTPYGAM_1._\boss skin\patrick boos.png"
+                    ).convert_alpha()
 
-            # ✅ positie rechts midden
-            self.rect = self.image.get_rect(
-                center=(BREEDTE - 200, HOOGTE // 2)
-            )
+                    scale = 0.6
+                    self.image = pygame.transform.scale(
+                        self.image,
+                        (
+                            int(self.image.get_width() * scale),
+                            int(self.image.get_height() * scale)
+                        )
+                    )
 
-            # ✅ behavior reset
-            self.attack_cooldown = 700
+                    # start onder scherm
+                    self.rect = self.image.get_rect(
+                        center=(BREEDTE - 200, HOOGTE + 200)
+                    )
+
+            # ⬆️ FASE 2 → terug omhoog
+            elif self.transform_phase == 2:
+
+                target_y = HOOGTE // 2
+
+                self.rect.y -= 6
+
+                if self.rect.centery <= target_y:
+
+                    self.transforming = False
+                    self.final_form = True
+
+                    # kleine delay voor attack
+                    self.attack_timer = pygame.time.get_ticks() + 700
+
+                    print("FINAL FORM READY")
+
+
+            
 
 
     def attack(self, enemy_bullets, minis, player, rockets):
@@ -1000,42 +1072,38 @@ class Boss:
 
 
             # =============================
-            # 🔴 HP ≤ 60 → DOODLE + ROCKETS
+            # 🟠 HP ≤ 40 → LASER + DOUBLE SPREAD
             # =============================
-            elif self.hp > 40:
+            elif self.hp > 20:
 
                 current_time = pygame.time.get_ticks()
 
-                if current_time - self.rocket_timer > self.rocket_cooldown:
+                # ✅ elke 4 seconden: laser walls
+                if current_time - self.laser_timer > 4000:
 
-                    if len(rockets) < 4:
+                    self.laser_timer = current_time
 
-                        rocket = LockRocket(
-                            self.rect.centerx,
-                            self.rect.centery,
-                            player
-                        )
+                    lanes = 4
+                    lane_height = HOOGTE // lanes
+                    weak_index = random.randint(0, lanes - 1)
 
-                        rockets.append(rocket)
+                    for i in range(lanes):
 
-                        self.rocket_timer = current_time
-            # =============================
-            # 🟣 HP ≤ 40 → FINAL ATTACK
-            # =============================
-            else:
+                        y_pos = i * lane_height
 
-                # ✅ FINAL STAGE ATTACK (TRIPLE SPREAD)
+                        if i == weak_index:
+                            laser = WeakLaser(self.rect.left, y_pos)
+                        else:
+                            laser = LaserWall(self.rect.left, y_pos)
 
-                angles = [-15, 0, 15]
+                        laser.rect.height = lane_height
+                        enemy_bullets.append(laser)
 
-                for angle in angles:
+                # ✅ ondertussen: dubbel spread shot
+                for angle in [-12, -6, 6, 12]:
 
-                    radians = math.radians(angle)
-
-                    speed = 6
-
-                    speed_x = -speed  # altijd naar links
-                    speed_y = math.sin(radians) * speed
+                    speed_x = -7
+                    speed_y = math.sin(math.radians(angle)) * 6
 
                     bullet = EnemyBullet(
                         self.rect.centerx,
@@ -1045,6 +1113,12 @@ class Boss:
                     )
 
                     enemy_bullets.append(bullet)
+            # =============================
+            # 🟣 HP ≤ 20 → GEEN SCHIETEN (alleen doodlebobs)
+            # =============================
+            else:
+                return
+
 
             
 
@@ -1133,9 +1207,9 @@ class Boss:
             print("Rage mode!")
             self.attack_cooldown = 300
 
-        elif self.phase2_stage == 5:
+        elif self.phase2_stage == 4:
             print("FINAL MODE!!!")
-            self.attack_cooldown = 200
+            self.attack_cooldown = 500
 
 # =====================================
 # END SCREEN
@@ -1384,6 +1458,32 @@ class Game:
                 self.minis.append(bottom)
 
                 self.last_doodle_spawn = current_time
+        
+        # ================================
+        # FINAL DOODLEBOS (HP ≤ 10)
+        # ================================
+        if self.boss.phase == 2 and self.boss.hp <= 20:
+
+            if len(self.minis) == 0:
+
+                top = MiniDoodle(
+                    BREEDTE + 50,
+                    HOOGTE // 4,
+                    self.player
+                )
+
+                bottom = MiniDoodle(
+                    BREEDTE + 50,
+                    HOOGTE * 3 // 4,
+                    self.player
+                )
+
+                top.mode = "final"
+                bottom.mode = "final"
+
+                self.minis.append(top)
+                self.minis.append(bottom)
+
 
         # ================================
         # ROCKETS
@@ -1419,7 +1519,16 @@ class Game:
         # ================================
         for mini in self.minis[:]:
 
-            mini.update(self.enemy_bullets)
+            result = mini.update(self.enemy_bullets)
+
+            if result == "shoot_rocket":
+                rocket = LockRocket(
+                    mini.rect.centerx,
+                    mini.rect.centery,
+                    self.player
+                )
+                self.rockets.append(rocket)
+
 
             if mini.rect.colliderect(self.player.hitbox):
 
