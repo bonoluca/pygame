@@ -129,7 +129,32 @@ class EnemyBullet:
             self.rect
         )
 
+class WaveBullet:
 
+    def __init__(self, x, y, speed_x, amplitude, frequency):
+
+        self.rect = pygame.Rect(x, y, 20, 20)
+
+        self.speed_x = speed_x
+        self.base_y = y
+
+        self.amplitude = amplitude      # hoe hoog de golf is
+        self.frequency = frequency      # hoe snel hij golft
+
+        self.time = 0
+
+    def update(self):
+
+        self.time += 0.1
+
+        self.rect.x += self.speed_x
+
+        # 🌊 sine wave beweging
+        self.rect.y = self.base_y + math.sin(self.time * self.frequency) * self.amplitude
+
+    def draw(self, screen):
+
+        pygame.draw.rect(screen, (255, 100, 255), self.rect)
 # LaserWall = alleen wat een laser is (beweging + tekenen)
 class LaserWall:
 
@@ -517,10 +542,9 @@ class Player:
         
 
 
-    def shoot(self, bullets):
+    def shoot(self, bullets, phase):
 
         toetsen = pygame.key.get_pressed()
-
         current_time = pygame.time.get_ticks()
 
         if toetsen[pygame.K_SPACE]:
@@ -529,21 +553,28 @@ class Player:
 
                 GunSound.play()
 
-                if self.direction == 1:
+                # =========================
+                # ✅ PHASE 2 → ALTIJD RECHTS
+                # =========================
+                if phase == 2:
                     x = self.rect.right
+                    speed = 12
+
+                # =========================
+                # ✅ PHASE 1 → NORMAAL
+                # =========================
                 else:
-                    x = self.rect.left
+                    if self.direction == 1:
+                        x = self.rect.right
+                        speed = 12
+                    else:
+                        x = self.rect.left
+                        speed = -12
 
-                bullet = Bullet(
-                    x,
-                    self.rect.centery
-                )
-
-                bullet.speed = 12 * self.direction
-
+                bullet = Bullet(x, self.rect.centery)
+                bullet.speed = speed
 
                 bullets.append(bullet)
-
                 self.last_shot = current_time
 
     def super_attack(self, bullets):
@@ -869,6 +900,10 @@ class Boss:
             self.transform_phase = 0
             self.transform_y_target = HOOGTE + 20
 
+            self.wave_timer = 0
+            self.wave_index = 0
+            self.wave_dir = 1
+
 
     def update(self):
 
@@ -1091,41 +1126,34 @@ class Boss:
             # =============================
             elif self.hp > 20:
 
-                # ✅ laser walls elke 4 sec
-                if current_time - self.laser_timer > 4000:
+                if current_time - self.wave_timer > 120:
 
-                    self.laser_timer = current_time
+                    self.wave_timer = current_time
 
-                    lanes = 4
-                    lane_height = HOOGTE // lanes
-                    weak_index = random.randint(0, lanes - 1)
-
-                    for i in range(lanes):
-
-                        y_pos = i * lane_height
-
-                        if i == weak_index:
-                            laser = WeakLaser(self.rect.left, y_pos)
-                        else:
-                            laser = LaserWall(self.rect.left, y_pos)
-
-                        laser.rect.height = lane_height
-                        enemy_bullets.append(laser)
-
-                # ✅ dubbel spread
-                for angle in [-15, -8, 8, 15]:
-
-                    speed_x = -7
-                    speed_y = math.sin(math.radians(angle)) * 6
+                    # 🎯 richt op speler (maar niet perfect!)
+                    target_y = player.rect.centery + random.randint(-50, 50)
 
                     bullet = EnemyBullet(
                         self.rect.centerx,
-                        self.rect.centery,
-                        speed_x,
-                        speed_y
+                        target_y,
+                        -7,
+                        0
                     )
 
                     enemy_bullets.append(bullet)
+                
+                if random.random() < 0.3:
+                    enemy_bullets.append(
+                        EnemyBullet(
+                            self.rect.centerx,
+                            player.rect.centery,
+                            -10,
+                            0
+                        )
+                    )
+
+
+
 
             # =============================
             # 🟣 ≤ 20 → GEEN ATTACKS ✅
@@ -1357,7 +1385,7 @@ class Game:
         # PLAYER + BOSS
         # ================================
         self.player.movement(self.boss.phase)
-        self.player.shoot(self.bullets)
+        self.player.shoot(self.bullets, self.boss.phase)
         self.player.super_attack(self.bullets)
 
         self.boss.update()
@@ -1370,10 +1398,15 @@ class Game:
 
             bullet.update()
 
+            removed = False  # ✅ belangrijk
+
+            # ========================
             # HIT BOSS
+            # ========================
             if bullet.rect.colliderect(self.boss.rect):
 
                 damage = 5 if self.debug_damage else 1
+
                 for _ in range(damage):
                     self.boss.take_damage()
 
@@ -1386,37 +1419,57 @@ class Game:
                 if self.player.super_meter > 5:
                     self.player.super_meter = 5
 
-                self.bullets.remove(bullet)
-                continue
+                removed = True
 
+
+            # ========================
             # HIT MINIS
-            for mini in self.minis[:]:
-                if bullet.rect.colliderect(mini.rect):
+            # ========================
+            if not removed:
+                for mini in self.minis[:]:
 
-                    mini.hp -= 1
-                    if mini.hp <= 0:
-                        self.minis.remove(mini)
+                    if bullet.rect.colliderect(mini.rect):
 
-                    if bullet in self.bullets:
-                        self.bullets.remove(bullet)
+                        mini.hp -= 1
 
-                    break
+                        if mini.hp <= 0:
+                            self.minis.remove(mini)
 
+                        removed = True
+                        break
+
+
+            # ========================
             # HIT WEAK LASER
-            for enemy in self.enemy_bullets[:]:
-                if isinstance(enemy, WeakLaser) and bullet.rect.colliderect(enemy.rect):
+            # ========================
+            if not removed:
+                for enemy in self.enemy_bullets[:]:
 
-                    enemy.hp -= 1
-                    if enemy.hp <= 0:
-                        self.enemy_bullets.remove(enemy)
+                    if isinstance(enemy, WeakLaser) and bullet.rect.colliderect(enemy.rect):
 
-                    if bullet in self.bullets:
-                        self.bullets.remove(bullet)
+                        enemy.hp -= 1
 
-                    break
+                        if enemy.hp <= 0:
+                            self.enemy_bullets.remove(enemy)
 
-            if bullet.rect.left > BREEDTE:
-                self.bullets.remove(bullet)
+                        removed = True
+                        break
+
+
+            # ========================
+            # OUT OF SCREEN
+            # ========================
+            if not removed and bullet.rect.left > BREEDTE:
+                removed = True
+
+
+            # ========================
+            # EFFECTIEF VERWIJDEREN
+            # ========================
+            if removed:
+                if bullet in self.bullets:
+                    self.bullets.remove(bullet)
+
 
         
         if self.boss.phase == 2 and 60 >= self.boss.hp > 40 and not self.spawned_doodles:
@@ -1943,3 +1996,4 @@ class MainMenu:
 # START
 menu = MainMenu()
 menu.run()
+
