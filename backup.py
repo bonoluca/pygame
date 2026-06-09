@@ -938,6 +938,16 @@ class Boss:
             self.final_delay = 2000  # 2 sec charge
             self.final_hits = 5
 
+            # =====================================
+            # 🎬 THRESHOLD TRANSITIONS
+            # =====================================
+            self.thresholds = [80, 60, 40, 20]
+            self.current_threshold_index = 0
+
+            self.transitioning = False
+            self.transition_timer = 0
+
+
 
     def update(self):
 
@@ -990,6 +1000,30 @@ class Boss:
                     print("FINAL FORM READY")
 
             return  # ⛔ STOP ALLES ANDERS
+        
+        # =========================
+        # 🚀 TRANSITION ANIMATION
+        # =========================
+        if self.transitioning:
+
+            # 1. vlieg naar rechts (uit scherm)
+            if self.rect.left < BREEDTE + 200:
+                self.rect.x += 10
+                return
+
+            # 2. korte pause (transform moment)
+            if pygame.time.get_ticks() - self.transition_timer < 1200:
+                return
+
+            # 3. kom terug in beeld
+            self.rect.x -= 8
+
+            if self.rect.right <= BREEDTE - 50:
+
+                print("TRANSITION DONE ✅")
+                self.transitioning = False
+
+            return
 
         # =====================================
         # PHASE 1
@@ -1038,6 +1072,25 @@ class Boss:
 
             # 💥 sneller attacks in final phase
             self.attack_cooldown = 200
+        
+        # =========================
+        # 🎬 CHECK VOOR NIEUWE TRANSITION
+        # =========================
+        if self.phase == 2 and not self.transitioning:
+
+            if self.current_threshold_index < len(self.thresholds):
+
+                next_threshold = self.thresholds[self.current_threshold_index]
+
+                if self.hp <= next_threshold:
+
+                    print(f"TRANSITION START at {next_threshold} 🔥")
+
+                    self.transitioning = True
+                    self.transition_timer = pygame.time.get_ticks()
+
+                    self.current_threshold_index += 1
+        
 
 
 
