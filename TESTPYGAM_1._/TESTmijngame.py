@@ -891,15 +891,14 @@ class Boss:
             )
 
             self.image_phase2 = pygame.image.load(
-                r"TESTPYGAM_1._\Bikini-Patrick.png"
+                r"TESTPYGAM_1._\boss skin\EyeOfAgamotoPhase2.1.png"
             )
 
             self.image_phase2 = pygame.transform.scale(
                 self.image_phase2,
                 (
-                    self.image_phase2.get_width() // 5,
-                    self.image_phase2.get_height() // 5
-                )
+                    self.image_phase2.get_width() * 4,
+                    self.image_phase2.get_height() * 4                )
             )
 
             self.image = self.image_phase1
@@ -976,10 +975,10 @@ class Boss:
 
                     # ✅ image veranderen HIER
                     self.image = pygame.image.load(
-                        r"TESTPYGAM_1._\boss skin\patrick boos.png"
+                        r"TESTPYGAM_1._/boss skin/EyeOfAgamotoPhase2.2.png"
                     ).convert_alpha()
 
-                    scale = 0.6
+                    scale = 2
                     self.image = pygame.transform.scale(
                         self.image,
                         (
@@ -1390,7 +1389,7 @@ def end_screen(text):
         )
 
         info = small_font.render(
-            "Press R to Restart or ESC to Quit",
+            "R = Restart   N = Menu   ESC = Quit",
             True,
             (255, 255, 255)
         )
@@ -1431,6 +1430,12 @@ def end_screen(text):
 
                     pygame.quit()
                     sys.exit()
+
+                if event.key == pygame.K_n:
+                        menu = MainMenu()
+                        menu.run()
+                        return
+
 
 # =====================================
 # GAME CLASS
@@ -2058,14 +2063,24 @@ class TutorialGame:
                 bullet.draw(frame)
 
             # UI / tekst
-            uitleg = [
-                "TUTORIAL",
-                "Beweeg: Q / D",
-                "Spring: Z",
-                "Schiet: SPACE",
-                "Probeer rond te lopen en te schieten!",
-                "Druk ESC om terug te gaan"
-            ]
+            if control_scheme == "AZERTY":
+                uitleg = [
+                    "TUTORIAL AZERTY",
+                    "Beweeg: Q / D",
+                    "Spring: Z",
+                    "Schiet: SPACE",
+                    "Probeer rond te lopen en te schieten!",
+                    "Druk ESC om terug te gaan"
+                ]
+            else:
+                uitleg = [
+                    "TUTORIAL QWERTY",
+                    "Beweeg: A / D",
+                    "Spring: W",
+                    "Schiet: SPACE",
+                    "Probeer rond te lopen en te schieten!",
+                    "Druk ESC om terug te gaan"
+                ]
 
             for i, txt in enumerate(uitleg):
                 render = self.font.render(txt, True, (255, 255, 255))
@@ -2143,7 +2158,7 @@ class MainMenu:
         self.settings_menu.add.button('BACK', pygame_menu.events.BACK)
 
         # ✅ KNOPPEN
-        self.menu.add.vertical_margin(100)
+        self.menu.add.vertical_margin(1)
 
         self.menu.add.button('START', start_with_fade)
         self.menu.add.button('SETTINGS', self.settings_menu)  
