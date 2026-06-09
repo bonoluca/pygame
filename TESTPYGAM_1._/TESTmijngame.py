@@ -706,14 +706,14 @@ class Player:
 # BOSS
 # =====================================
 
-class MiniDoodle:
+class AngelFrogs:
 
     def __init__(self, x, y, target):
 
-        schaal = 0.08
+        schaal = 1
 
         self.image = pygame.image.load(
-            r"TESTPYGAM_1._\DoodleBob_Stock_Art.webp"
+            r"TESTPYGAM_1._\boss skin\AngelFrog.png"
         )
 
         self.image = pygame.transform.scale(
@@ -869,7 +869,7 @@ class MiniDoodle:
 class Boss:
     def __init__(self):
 
-            schaal = 0.15
+            schaal = 2
 
             self.speed_x = random.choice([-5, 5])
             self.speed_y = random.choice([-3, 3])
@@ -879,7 +879,7 @@ class Boss:
             # =====================================
 
             self.image_phase1 = pygame.image.load(
-                r"TESTPYGAM_1._\DoodleBob_Stock_Art.webp"
+                r"TESTPYGAM_1._\boss skin\frog.png"
             )
 
             self.image_phase1 = pygame.transform.scale(
@@ -1468,7 +1468,7 @@ class Game:
         self.spawned_70 = False
         self.spawned_65 = False
 
-        # ✅ DOODLEBOBS
+        # ✅ AngelFrogs
         self.minis = []
         self.spawned_doodles = False
         self.last_doodle_spawn = 0
@@ -1587,18 +1587,18 @@ class Game:
         
         if self.boss.phase == 2 and 60 >= self.boss.hp > 40 and not self.spawned_doodles:
 
-            print("DoodleBobs spawned 😈")
+            print("AngelFrogs spawned 😈")
 
             top_rect_y = self.boss.rect.top - 60
             bottom_rect_y = self.boss.rect.bottom + 60
 
-            top = MiniDoodle(
+            top = AngelFrogs(
                 self.boss.rect.left,
                 top_rect_y,
                 self.player
             )
 
-            bottom = MiniDoodle(
+            bottom = AngelFrogs(
                 self.boss.rect.left,
                 bottom_rect_y,
                 self.player
@@ -1614,7 +1614,7 @@ class Game:
             self.spawned_doodles = True
 
         # ================================
-        # ✅ DOODLEBOB RESPAWN (FIX)
+        # ✅ AngelFrogs RESPAWN (FIX)
         # ================================
         alive_minis = [m for m in self.minis if m.alive]
 
@@ -1622,15 +1622,15 @@ class Game:
 
             if len(alive_minis) == 0 and current_time - self.last_doodle_spawn > self.doodle_delay:
 
-                print("Respawning doodlebobs 😈")
+                print("Respawning AngelFrogs 😈")
 
-                top = MiniDoodle(
+                top = AngelFrogs(
                     self.boss.rect.left,
                     self.boss.rect.top - 60,
                     self.player
                 )
 
-                bottom = MiniDoodle(
+                bottom = AngelFrogs(
                     self.boss.rect.left,
                     self.boss.rect.bottom + 60,
                     self.player
@@ -1642,19 +1642,19 @@ class Game:
                 self.last_doodle_spawn = current_time
         
         # ================================
-        # FINAL DOODLEBOS (HP ≤ 10)
+        # FINAL FrogBoss (HP ≤ 10)
         # ================================
         if self.boss.phase == 2 and self.boss.hp <= 20:
 
             if len(self.minis) == 0:
 
-                top = MiniDoodle(
+                top = AngelFrogs(
                     BREEDTE + 50,
                     HOOGTE // 4,
                     self.player
                 )
 
-                bottom = MiniDoodle(
+                bottom = AngelFrogs(
                     BREEDTE + 50,
                     HOOGTE * 3 // 4,
                     self.player
@@ -1697,7 +1697,7 @@ class Game:
                 self.rockets.remove(rocket)
 
         # ================================
-        # DOODLEBOS UPDATE
+        # FrogBOS UPDATE
         # ================================
         for mini in self.minis[:]:
 
