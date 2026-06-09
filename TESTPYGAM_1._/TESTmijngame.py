@@ -786,9 +786,8 @@ class MiniDoodle:
     def draw(self, screen):
         screen.blit(self.image, self.rect)
 
-    class Boss:
-
-        def __init__(self):
+class Boss:
+    def __init__(self):
 
             schaal = 0.15
 
@@ -871,9 +870,7 @@ class MiniDoodle:
             self.transform_y_target = HOOGTE + 20
 
 
-            
-
-        def update(self):
+    def update(self):
 
         # =====================================
         # PHASE 1
