@@ -936,6 +936,7 @@ class Boss:
             self.final_mode = False
             self.final_timer = 0
             self.final_delay = 2000  # 2 sec charge
+            self.final_hits = 5
 
 
     def update(self):
@@ -1227,11 +1228,21 @@ class Boss:
             else:
                 return
     
-    def take_damage(self):
 
+    def take_damage(self, is_super=False):
+
+        
         if self.final_mode:
-            self.hp = 5
-            return
+
+                if is_super:
+                    self.final_hits -= 1
+                    print("FINAL HITS LEFT:", self.final_hits)
+
+                    if self.final_hits <= 0:
+                        end_screen("YOU WIN")
+
+                return
+
 
 
 
@@ -1484,10 +1495,13 @@ class Game:
             # ========================
             if bullet.rect.colliderect(self.boss.rect):
 
-                damage = 5 if self.debug_damage else 1
+                if bullet.image == self.player.mega_image:
+                    self.boss.take_damage(is_super=True)
+                else:
+                    self.boss.take_damage(is_super=False)
 
-                for _ in range(damage):
-                    self.boss.take_damage()
+
+
 
                 self.player.hit_counter += 1
 
