@@ -68,6 +68,10 @@ CrashSound = pygame.mixer.Sound(
     r'TESTPYGAM_1._\sfx\soundscrate-Rattling_Metal_Impact_3.mp3'
 )
 
+
+BeamKillSound = pygame.mixer.Sound(r"TESTPYGAM_1._\sfx\Fahh Sound Effect.mp3")
+
+
 menusound = pygame.mixer.Sound(
     r'TESTPYGAM_1._\sfx\Sarias Song - Zelda Ocarina of Time - Lost Woods - Part 42.mp3'
 )
@@ -710,7 +714,7 @@ class AngelFrogs:
 
     def __init__(self, x, y, target):
 
-        schaal = 1
+        schaal = 1.5
 
         self.image = pygame.image.load(
             r"TESTPYGAM_1._\boss skin\AngelFrog.png"
@@ -869,7 +873,7 @@ class AngelFrogs:
 class Boss:
     def __init__(self):
 
-            schaal = 2
+            schaal = 2.5
 
             self.speed_x = random.choice([-5, 5])
             self.speed_y = random.choice([-3, 3])
@@ -897,8 +901,8 @@ class Boss:
             self.image_phase2 = pygame.transform.scale(
                 self.image_phase2,
                 (
-                    self.image_phase2.get_width() * 4,
-                    self.image_phase2.get_height() * 4                )
+                    self.image_phase2.get_width() * 5,
+                    self.image_phase2.get_height() * 5                )
             )
 
             self.image = self.image_phase1
@@ -1487,6 +1491,18 @@ class Game:
 
         self.second_rocket_timer = 0
 
+        self.beam_death = False
+        self.beam_death_timer = 0
+
+        self.beam_image = pygame.image.load(
+            r"TESTPYGAM_1._\effecten\fahh-Image.png"
+        ).convert_alpha()
+
+        self.beam_image = pygame.transform.scale(
+            self.beam_image, (BREEDTE, HOOGTE)
+        )
+
+
 
     def update(self):
 
@@ -1734,6 +1750,7 @@ class Game:
             # =====================
             # 💀 GALICK GUN LOGIC
             # =====================
+            
             if isinstance(bullet, GalickGun):
 
                 bullet.update()
@@ -1747,11 +1764,24 @@ class Game:
                 if self.player.hitbox.colliderect(bullet.rect):
 
                     if current_time - self.player.last_hit > self.player.hit_cooldown:
+
                         if not self.god_mode:
                             self.player.lives -= 1
 
+                            # ✅ CHECK: sterft player door beam?
+                            if self.player.lives <= 0 and not self.beam_death:
+                                BeamKillSound.play()   # 👈 speciaal geluid    
+                                # 💜 START FADE
+                                self.beam_death = True
+                                self.beam_death_timer = pygame.time.get_ticks()
+
+                                return   # ✅ stopt verdere damage
+
+                            else:
+                                CrashSound.play()      # gewone hit
+
                         self.player.last_hit = current_time
-                        CrashSound.play()
+
 
                 continue  # ❗ BELANGRIJK → skip rest
 
@@ -1793,9 +1823,11 @@ class Game:
         # ================================
         # GAME OVER
         # ================================
-        if self.player.lives <= 0:
+        
+        if self.player.lives <= 0 and not self.beam_death:
             self.running = False
             end_screen("GAME OVER")
+
 
         # ================================
         # BACKGROUND SCROLL
@@ -1925,6 +1957,27 @@ class Game:
                 self.boss.transition = False
 
                 self.boss.start_phase2()
+
+            
+        # =====================================
+        # 💜 BEAM DEATH FADE (HIER TOEVOEGEN)
+        # =====================================
+        if self.beam_death:
+
+            elapsed = pygame.time.get_ticks() - self.beam_death_timer
+
+            if elapsed < 2000:
+
+                alpha = int((elapsed / 2000) * 255)
+
+                fade_surface = self.beam_image.copy()
+                fade_surface.set_alpha(alpha)
+
+                frame.blit(fade_surface, (0, 0))
+
+            else:
+                end_screen("GAME OVER")
+
 
         pygame.display.flip()
 
