@@ -139,7 +139,7 @@ class GalickGun:
         ).convert_alpha()
 
         # schaal (pas aan als nodig)
-        # self.image = pygame.transform.scale(self.image, (300, 80))
+        self.image = pygame.transform.scale(self.image, (1000, 80))
 
         # positie
         self.rect = self.image.get_rect(midright=(x, y))
@@ -1980,6 +1980,83 @@ def set_controls(value, scheme):
     control_scheme = scheme
     print("Controls ingesteld op:", control_scheme)
 
+
+
+def start_tutorial():
+
+    menusound.stop()
+
+    tutorial = TutorialGame()
+    tutorial.run()
+
+
+class TutorialGame:
+
+    def __init__(self):
+        self.clock = pygame.time.Clock()
+        self.running = True
+
+        self.player = Player()
+        self.bullets = []
+
+        self.font = pygame.font.SysFont(None, 40)
+
+    def run(self):
+
+        while self.running:
+
+            self.clock.tick(60)
+
+            # events
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        self.running = False  # terug naar menu
+
+            # update
+            self.player.movement(phase=1)  # gewone controls
+            self.player.shoot(self.bullets, phase=1)
+
+            for bullet in self.bullets[:]:
+                bullet.update()
+
+                if bullet.rect.left > BREEDTE:
+                    self.bullets.remove(bullet)
+
+            # draw
+            frame.fill((30, 30, 30))
+
+            # speler
+            self.player.draw(frame)
+
+            # bullets
+            for bullet in self.bullets:
+                bullet.draw(frame)
+
+            # UI / tekst
+            uitleg = [
+                "TUTORIAL",
+                "Beweeg: Q / D",
+                "Spring: Z",
+                "Schiet: SPACE",
+                "Probeer rond te lopen en te schieten!",
+                "Druk ESC om terug te gaan"
+            ]
+
+            for i, txt in enumerate(uitleg):
+                render = self.font.render(txt, True, (255, 255, 255))
+                frame.blit(render, (50, 50 + i * 45))
+
+            pygame.display.flip()
+
+
+
+
+
 class MainMenu:
 
     def __init__(self):
@@ -2049,8 +2126,10 @@ class MainMenu:
         self.menu.add.vertical_margin(100)
 
         self.menu.add.button('START', start_with_fade)
-        self.menu.add.button('SETTINGS', self.settings_menu)
+        self.menu.add.button('SETTINGS', self.settings_menu)  
+        self.menu.add.button('TUTORIAL', start_tutorial)   
         self.menu.add.button('QUIT', quit_game)
+        
 
     # 🎬 film grain
     def draw_grain(self):
