@@ -129,6 +129,35 @@ class EnemyBullet:
             self.rect
         )
 
+class GalickGun:
+
+    def __init__(self, x, y):
+
+        # 🔥 laad jouw beam image
+        self.image = pygame.image.load(
+            r"TESTPYGAM_1._\effecten\galick gun.png"
+        ).convert_alpha()
+
+        # schaal (pas aan als nodig)
+        # self.image = pygame.transform.scale(self.image, (300, 80))
+
+        # positie
+        self.rect = self.image.get_rect(midright=(x, y))
+
+        # hoe lang hij blijft
+        self.spawn_time = pygame.time.get_ticks()
+        self.duration = 800  # ms
+
+    def update(self):
+        pass  # beam beweegt niet
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+    def should_destroy(self):
+        return pygame.time.get_ticks() - self.spawn_time > self.duration
+
+
 class WaveBullet:
 
     def __init__(self, x, y, speed_x, amplitude, frequency):
@@ -904,6 +933,10 @@ class Boss:
             self.wave_index = 0
             self.wave_dir = 1
 
+            self.final_mode = False
+            self.final_timer = 0
+            self.final_delay = 2000  # 2 sec charge
+
 
     def update(self):
 
@@ -995,11 +1028,42 @@ class Boss:
 
             self.transforming = True
             self.transform_phase = 1
+        
+        if self.phase == 2 and self.hp <= 5 and not self.final_mode:
+            print("FINAL MODE START 🔥")
+
+            self.final_mode = True
+            self.final_timer = pygame.time.get_ticks()
+
+            # 💥 sneller attacks in final phase
+            self.attack_cooldown = 200
 
 
 
 
     def attack(self, enemy_bullets, minis, player, rockets):
+
+        if self.final_mode:
+
+            current_time = pygame.time.get_ticks()
+
+            # wachten (charge moment)
+            if current_time - self.final_timer > self.final_delay:
+
+                # fire beam (één keer per paar sec)
+                if current_time - self.laser_timer > 2000:
+
+                    self.laser_timer = current_time
+
+                    enemy_bullets.append(
+                        GalickGun(
+                            self.rect.left,
+                            self.rect.centery
+                        )
+                    )
+
+            return
+
 
         # ❌ GEEN ATTACKS tijdens transform
         if self.transforming:
@@ -1151,7 +1215,9 @@ class Boss:
                             0
                         )
                     )
+            
 
+          
 
 
 
@@ -1162,6 +1228,12 @@ class Boss:
                 return
     
     def take_damage(self):
+
+        if self.final_mode:
+            self.hp = 5
+            return
+
+
 
         # ❗ GEEN DAMAGE TIJDENS TRANSFORM
         if self.transforming:
@@ -1229,6 +1301,13 @@ class Boss:
     def draw(self, screen):
 
         screen.blit(self.image, self.rect)
+
+        if self.final_mode:
+
+            glow_size = self.rect.inflate(40, 40)
+
+            pygame.draw.ellipse(screen, (200, 0, 255), glow_size, 4)
+
     
     def phase2_event(self):
         print("Phase 2 event:", self.phase2_stage)
@@ -1611,11 +1690,35 @@ class Game:
             if not mini.alive:
                 self.minis.remove(mini)
 
-        # ================================
-        # ENEMY BULLETS
-        # ================================
         for bullet in self.enemy_bullets[:]:
 
+            # =====================
+            # 💀 GALICK GUN LOGIC
+            # =====================
+            if isinstance(bullet, GalickGun):
+
+                bullet.update()
+
+                # destroy na tijd
+                if bullet.should_destroy():
+                    self.enemy_bullets.remove(bullet)
+                    continue
+
+                # damage player (beam blijft!)
+                if self.player.hitbox.colliderect(bullet.rect):
+
+                    if current_time - self.player.last_hit > self.player.hit_cooldown:
+                        if not self.god_mode:
+                            self.player.lives -= 1
+
+                        self.player.last_hit = current_time
+                        CrashSound.play()
+
+                continue  # ❗ BELANGRIJK → skip rest
+
+            # =====================
+            # 💥 NORMALE BULLETS
+            # =====================
             bullet.update()
 
             if isinstance(bullet, Spike):
@@ -1633,6 +1736,8 @@ class Game:
                     CrashSound.play()
 
                 self.enemy_bullets.remove(bullet)
+
+
 
         # ================================
         # PLAYER vs BOSS
