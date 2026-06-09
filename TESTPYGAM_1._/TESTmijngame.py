@@ -11,6 +11,7 @@ pygame.init()
 # =====================================
 
 FPS = 60
+control_scheme = "AZERTY"
 
 # =====================================
 # BACKGROUND
@@ -462,6 +463,18 @@ class Player:
     def movement(self, phase):
 
         toetsen = pygame.key.get_pressed()
+        
+        if control_scheme == "AZERTY":
+                links = pygame.K_q
+                rechts = pygame.K_d
+                omhoog = pygame.K_z
+                omlaag = pygame.K_s
+        else:  # QWERTY
+                links = pygame.K_a
+                rechts = pygame.K_d
+                omhoog = pygame.K_w
+                omlaag = pygame.K_s
+
         moving = False
 
         # =====================================
@@ -469,19 +482,19 @@ class Player:
         # =====================================
         if phase == 1:
 
-            if toetsen[pygame.K_q]:
+            if toetsen[links]:
                 self.rect.x -= self.speed
                 self.direction = -1
                 moving = True
 
-            if toetsen[pygame.K_d]:
+            if toetsen[rechts]:
                 self.rect.x += self.speed
                 self.direction = 1
                 moving = True
 
 
             # springen
-            if toetsen[pygame.K_z] and self.on_ground:
+            if toetsen[omhoog] and self.on_ground:
                 self.velocity_y = self.jump_power
                 self.on_ground = False
 
@@ -501,22 +514,22 @@ class Player:
         # =====================================
         else:
 
-            if toetsen[pygame.K_q]:
+            if toetsen[links]:
                 self.rect.x -= self.speed
                 self.direction = -1
                 moving = True
 
-            if toetsen[pygame.K_d]:
+            if toetsen[rechts]:
                 self.rect.x += self.speed
                 self.direction = 1
                 moving = True
 
 
-            if toetsen[pygame.K_z]:
+            if toetsen[omhoog]:
                 self.rect.y -= self.speed
                 moving = True
 
-            if toetsen[pygame.K_s]:
+            if toetsen[omlaag]:
                 self.rect.y += self.speed
                 moving = True
 
@@ -608,11 +621,18 @@ class Player:
 
     def super_attack(self, bullets):
 
+        
+        if control_scheme == "AZERTY":
+                super_key = pygame.K_a
+        else:  # QWERTY
+                super_key = pygame.K_q
+
+
         toetsen = pygame.key.get_pressed()
 
         current_time = pygame.time.get_ticks()
 
-        if toetsen[pygame.K_a]:
+        if toetsen[super_key]:
 
             if current_time - self.last_super > self.super_cooldown:
 
