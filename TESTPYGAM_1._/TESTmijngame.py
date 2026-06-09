@@ -872,6 +872,56 @@ class Boss:
 
     def update(self):
 
+        # =========================
+        # 🛑 TRANSFORM OVERRIDE (SUPER BELANGRIJK)
+        # =========================
+        if self.transforming:
+
+            # ⬇️ FASE 1 → naar beneden
+            if self.transform_phase == 1:
+
+                self.rect.y += 8
+
+                if self.rect.top > HOOGTE:
+                    self.transform_phase = 2
+
+                    # ✅ image veranderen HIER
+                    self.image = pygame.image.load(
+                        r"TESTPYGAM_1._\boss skin\patrick boos.png"
+                    ).convert_alpha()
+
+                    scale = 0.6
+                    self.image = pygame.transform.scale(
+                        self.image,
+                        (
+                            int(self.image.get_width() * scale),
+                            int(self.image.get_height() * scale)
+                        )
+                    )
+
+                    self.rect = self.image.get_rect(
+                        center=(BREEDTE - 200, HOOGTE + 200)
+                    )
+
+            # ⬆️ FASE 2 → omhoog
+            elif self.transform_phase == 2:
+
+                target_y = HOOGTE // 2
+
+                self.rect.y -= 6
+
+                if self.rect.centery <= target_y:
+
+                    self.transforming = False
+                    self.final_form = True
+
+                    # kleine pause voor attacks
+                    self.attack_timer = pygame.time.get_ticks() + 700
+
+                    print("FINAL FORM READY")
+
+            return  # ⛔ STOP ALLES ANDERS
+
         # =====================================
         # PHASE 1
         # =====================================
@@ -900,9 +950,9 @@ class Boss:
                 self.rect.x = BREEDTE - self.rect.width - 50
 
         # =========================
-        # START TRANSFORM
+        # START TRANSFORM (ONDERAAN!)
         # =========================
-        if self.phase == 2 and self.hp <= 40 and not self.final_form and not self.transforming:
+        if self.phase == 2 and self.hp <= 40 and not self.final_form:
 
             print("START TRANSFORM")
 
@@ -911,63 +961,14 @@ class Boss:
             self.transforming = True
             self.transform_phase = 1
 
-            # ❌ geen image change hier!
-            self.attack_timer = pygame.time.get_ticks()
 
-        # =========================
-        # TRANSFORM ANIMATIE
-        # =========================
-        if self.transforming:
-
-            # ⬇️ FASE 1 → naar beneden verdwijnen
-            if self.transform_phase == 1:
-
-                self.rect.y += 8
-
-                if self.rect.top > HOOGTE:
-                    self.transform_phase = 2
-
-                    # ✅ NU PAS NIEUWE IMAGE
-                    self.image = pygame.image.load(
-                        r"TESTPYGAM_1._\boss skin\patrick boos.png"
-                    ).convert_alpha()
-
-                    scale = 0.6
-                    self.image = pygame.transform.scale(
-                        self.image,
-                        (
-                            int(self.image.get_width() * scale),
-                            int(self.image.get_height() * scale)
-                        )
-                    )
-
-                    # start onder scherm
-                    self.rect = self.image.get_rect(
-                        center=(BREEDTE - 200, HOOGTE + 200)
-                    )
-
-            # ⬆️ FASE 2 → terug omhoog
-            elif self.transform_phase == 2:
-
-                target_y = HOOGTE // 2
-
-                self.rect.y -= 6
-
-                if self.rect.centery <= target_y:
-
-                    self.transforming = False
-                    self.final_form = True
-
-                    # kleine delay voor attack
-                    self.attack_timer = pygame.time.get_ticks() + 700
-
-                    print("FINAL FORM READY")
-
-
-            
 
 
     def attack(self, enemy_bullets, minis, player, rockets):
+
+        # ❌ GEEN ATTACKS tijdens transform
+        if self.transforming:
+            return
 
         current_time = pygame.time.get_ticks()
 
@@ -977,7 +978,7 @@ class Boss:
         self.attack_timer = current_time
 
         # =====================================
-        # ✅ PHASE 1 (blijft hetzelfde)
+        # ✅ PHASE 1
         # =====================================
         if self.phase == 1:
 
@@ -1011,12 +1012,12 @@ class Boss:
                     enemy_bullets.append(bullet)
 
         # =====================================
-        # ✅ PHASE 2 (JOUW SCHEMA)
+        # ✅ PHASE 2
         # =====================================
         else:
 
             # =============================
-            # 🟡 HP > 80 → SPREAD ONLY
+            # 🟡 HP > 80 → spread
             # =============================
             if self.hp > 80:
 
@@ -1030,11 +1031,11 @@ class Boss:
                     enemy_bullets.append(bullet)
 
             # =============================
-            # 🟠 HP ≤ 80 → LASERS + SINGLE
+            # 🟠 80 → 60 → laser + single
             # =============================
             elif self.hp > 60:
 
-                # 🔴 gewone kogel blijft altijd
+                # single shot
                 bullet = EnemyBullet(
                     self.rect.centerx,
                     self.rect.centery,
@@ -1043,9 +1044,7 @@ class Boss:
                 )
                 enemy_bullets.append(bullet)
 
-                current_time = pygame.time.get_ticks()
-
-                # 🔷 ALLEEN lasers na cooldown
+                # lasers
                 if current_time - self.laser_timer > self.laser_cooldown:
 
                     self.laser_timer = current_time
@@ -1066,16 +1065,33 @@ class Boss:
                         laser.rect.height = lane_height
                         enemy_bullets.append(laser)
 
+            # =============================
+            # 🔴 60 → 40 → (OPTIONEEL leeg of lichte attack)
+            # =============================
+            elif self.hp > 40:
+
+                # lichte pattern (rust moment)
+                if current_time % 2 == 0:
+                    return
+
+                for angle in [-10, 0, 10]:
+
+                    bullet = EnemyBullet(
+                        self.rect.centerx,
+                        self.rect.centery,
+                        -5,
+                        angle * 2
+                    )
+
+                    enemy_bullets.append(bullet)
 
 
             # =============================
-            # 🟠 HP ≤ 40 → LASER + DOUBLE SPREAD
+            # 🟠 40 → 20 → LASER + DOUBLE SPREAD ✅
             # =============================
             elif self.hp > 20:
 
-                current_time = pygame.time.get_ticks()
-
-                # ✅ elke 4 seconden: laser walls
+                # ✅ laser walls elke 4 sec
                 if current_time - self.laser_timer > 4000:
 
                     self.laser_timer = current_time
@@ -1096,8 +1112,8 @@ class Boss:
                         laser.rect.height = lane_height
                         enemy_bullets.append(laser)
 
-                # ✅ ondertussen: dubbel spread shot
-                for angle in [-12, -6, 6, 12]:
+                # ✅ dubbel spread
+                for angle in [-15, -8, 8, 15]:
 
                     speed_x = -7
                     speed_y = math.sin(math.radians(angle)) * 6
@@ -1110,36 +1126,39 @@ class Boss:
                     )
 
                     enemy_bullets.append(bullet)
+
             # =============================
-            # 🟣 HP ≤ 20 → GEEN SCHIETEN (alleen doodlebobs)
+            # 🟣 ≤ 20 → GEEN ATTACKS ✅
             # =============================
             else:
                 return
-
-
-            
-
-
-
+    
     def take_damage(self):
+
+        # ❗ GEEN DAMAGE TIJDENS TRANSFORM
+        if self.transforming:
+            return
 
         HitSound.play()
 
         self.hp -= 1
 
-        # ✅ PHASE 1 → DIRECT VERDWIJNEN + TRANSITION
+        # ✅ trigger exact op 40 (extra zekerheid)
+        if self.phase == 2 and self.hp == 40 and not self.final_form:
+            print("TRANSFORM TRIGGER EXACT")
+
+        # ✅ PHASE 1 → DIRECT VERDWIJNEN
         if self.phase == 1 and self.hp <= 0:
 
-            # boss weg (kan player niet meer raken)
             self.rect.x = -1000
             self.rect.y = -1000
 
             self.transition = True
             self.transition_timer = pygame.time.get_ticks()
 
-            return  # ⛔ STOP → voorkomt dubbele code
+            return
 
-        # ✅ PHASE 2 EVENTS (blijft hetzelfde)
+        # ✅ PHASE 2 EVENTS
         if self.phase == 2:
 
             new_stage = (100 - self.hp) // 20
@@ -1150,11 +1169,13 @@ class Boss:
 
         print("Boss HP:", self.hp)
 
-        # ✅ PHASE 2 → GAME WIN
+        # ✅ WIN
         if self.phase == 2 and self.hp <= 0:
-
             pygame.time.delay(1000)
             end_screen("YOU WIN")
+
+
+   
 
     def start_phase2(self):
 
@@ -1204,7 +1225,7 @@ class Boss:
             print("Rage mode!")
             self.attack_cooldown = 300
 
-        elif self.phase2_stage == 4:
+        elif self.phase2_stage == 5:
             print("FINAL MODE!!!")
             self.attack_cooldown = 500
 
@@ -1397,9 +1418,7 @@ class Game:
             if bullet.rect.left > BREEDTE:
                 self.bullets.remove(bullet)
 
-        # ================================
-        # ✅ DOODLEBOB SPAWN (FIX)
-        # ================================
+        
         if self.boss.phase == 2 and 60 >= self.boss.hp > 40 and not self.spawned_doodles:
 
             print("DoodleBobs spawned 😈")
