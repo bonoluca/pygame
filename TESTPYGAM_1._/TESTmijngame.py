@@ -28,8 +28,11 @@ achtergrond_fase2 = pygame.image.load(
     r"TESTPYGAM_1._\achtergrond\Schermafbeelding 2026-05-28 104846.png"                    
 )
 
+beanbag_image = pygame.image.load(
+    r"TESTPYGAM_1._\boss skin\bean bag totorial.png"
+)
 
-
+beanbag_image = pygame.transform.scale(beanbag_image, (200, 200))
 
 achtergrond_fase1 = pygame.transform.scale(
     achtergrond_fase1,
@@ -76,9 +79,7 @@ menusound = pygame.mixer.Sound(
     r'TESTPYGAM_1._\sfx\Sarias Song - Zelda Ocarina of Time - Lost Woods - Part 42.mp3'
 )
 
-# =====================================
-# BULLET CLASS
-# =====================================
+
 
 class Bullet:
 
@@ -961,8 +962,24 @@ class Boss:
             self.final_delay = 2000  # 2 sec charge
             self.final_hits = 5
 
+            self.phase_transitioning = False
+            self.transition_time = 0
+            self.transition_duration = 2000  # 2 sec animatie
+
+            self.locked_stage = -1  # om nieuwe fases te detecteren
+            
+
 
     def update(self):
+
+        if self.phase_transitioning:
+
+            current_time = pygame.time.get_ticks()
+
+            if current_time - self.transition_time > self.transition_duration:
+                self.phase_transitioning = False
+
+            return  # ❗ stop ALLES (movement + attacks)
 
         # =========================
         # 🛑 TRANSFORM OVERRIDE (SUPER BELANGRIJK)
@@ -1066,6 +1083,9 @@ class Boss:
 
 
     def attack(self, enemy_bullets, minis, player, rockets):
+
+        if self.phase_transitioning:
+            return
 
         if self.final_mode:
 
@@ -1254,6 +1274,11 @@ class Boss:
 
     def take_damage(self, is_super=False):
 
+        # voorkom spam damage bij phase overgang
+        if self.transition:
+            return
+
+
         
         if self.final_mode:
 
@@ -1265,8 +1290,10 @@ class Boss:
                         end_screen("YOU WIN")
 
                 return
-
-
+        
+        # ❗ geen damage tijdens transition
+        if self.phase_transitioning:
+            return
 
 
         # ❗ GEEN DAMAGE TIJDENS TRANSFORM
@@ -1334,7 +1361,21 @@ class Boss:
 
     def draw(self, screen):
 
-        screen.blit(self.image, self.rect)
+        draw_rect = self.rect.copy()
+
+        # 🔥 shake effect
+        if self.phase_transitioning:
+            draw_rect.x += random.randint(-5, 5)
+            draw_rect.y += random.randint(-5, 5)
+
+        # glow
+        if self.phase_transitioning:
+            glow = draw_rect.inflate(30, 30)
+            pygame.draw.ellipse(screen, (255, 200, 0), glow, 4)
+
+        # teken boss
+        screen.blit(self.image, draw_rect)
+        
 
         if self.final_mode:
 
@@ -1344,35 +1385,41 @@ class Boss:
 
     
     def phase2_event(self):
+
         print("Phase 2 event:", self.phase2_stage)
 
+        # ✅ START TRANSITION
+        self.phase_transitioning = True
+        self.transition_time = pygame.time.get_ticks()
+
         if self.phase2_stage == 1:
-            print("Boss wordt sneller!")
             self.attack_cooldown = 900
 
         elif self.phase2_stage == 2:
-
-            print("STAGE 2: BOSS WORDT GROOT EN STIL")
-
             self.attack_cooldown = 1100
             self.big_mode = True
 
-
         elif self.phase2_stage == 3:
-            print("Chaos mode!")
             self.attack_cooldown = 500
 
         elif self.phase2_stage == 4:
-            print("Rage mode!")
             self.attack_cooldown = 300
 
-        elif self.phase2_stage == 5:
-            print("FINAL MODE!!!")
-            self.attack_cooldown = 500
 
-# =====================================
-# END SCREEN
-# =====================================
+class TutorialDummy:
+
+    def __init__(self, x, y):
+        self.image = beanbag_image
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.hp = 999999  # praktisch oneindig
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+
+    def update(self):
+        pass  # beweegt niet
+
 
 def end_screen(text):
 
@@ -1440,10 +1487,6 @@ def end_screen(text):
                         menu.run()
                         return
 
-
-# =====================================
-# GAME CLASS
-# =====================================
 
 class Game:
 
@@ -1534,7 +1577,7 @@ class Game:
             # ========================
             # HIT BOSS
             # ========================
-            if bullet.rect.colliderect(self.boss.rect):
+            if not self.boss.transition and bullet.rect.colliderect(self.boss.rect):
 
                 if bullet.image == self.player.mega_image:
                     self.boss.take_damage(is_super=True)
@@ -1887,8 +1930,16 @@ class Game:
             )
 
     def draw(self):
-        
 
+        shake_x = 0
+        shake_y = 0
+
+        if self.boss.phase_transitioning:
+            shake_x = random.randint(-5, 5)
+            shake_y = random.randint(-5, 5)
+
+
+    
         # BACKGROUND
 
         if self.boss.phase == 1:
@@ -2077,7 +2128,11 @@ class TutorialGame:
         self.player = Player()
         self.bullets = []
 
+        # ✅ Dummy netjes op de grond
+        self.dummy = TutorialDummy(BREEDTE - 350, HOOGTE - 120 - 200)
+
         self.font = pygame.font.SysFont(None, 40)
+        self.ui_font = pygame.font.SysFont(None, 60)
 
     def run(self):
 
@@ -2085,7 +2140,9 @@ class TutorialGame:
 
             self.clock.tick(60)
 
-            # events
+            # =======================
+            # EVENTS
+            # =======================
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -2093,53 +2150,96 @@ class TutorialGame:
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_ESCAPE:
-                        self.running = False  # terug naar menu
+                        self.running = False
 
-            # update
-            self.player.movement(phase=1)  # gewone controls
+            # =======================
+            # UPDATE
+            # =======================
+            self.player.movement(phase=1)
             self.player.shoot(self.bullets, phase=1)
+            self.player.super_attack(self.bullets)
 
             for bullet in self.bullets[:]:
                 bullet.update()
 
+                # 🎯 HIT DUMMY
+                if bullet.rect.colliderect(self.dummy.rect):
+
+                    GunSound.play()
+
+                    # ✅ kleine shake effect
+                    self.dummy.rect.x += random.randint(-3, 3)
+
+                    # ✅ super meter logic
+                    self.player.hit_counter += 1
+
+                    if self.player.hit_counter >= 3:
+                        self.player.super_meter += 1
+                        self.player.hit_counter = 0
+
+                    if self.player.super_meter > self.player.max_meter:
+                        self.player.super_meter = self.player.max_meter
+
+                    self.bullets.remove(bullet)
+                    continue
+
+                # buiten scherm
                 if bullet.rect.left > BREEDTE:
                     self.bullets.remove(bullet)
 
-            # draw
-            frame.fill((30, 30, 30))
+            # =======================
+            # DRAW
+            # =======================
+            frame.blit(achtergrond_fase1, (0, 0))
 
-            # speler
+            self.dummy.draw(frame)
+
             self.player.draw(frame)
 
-            # bullets
             for bullet in self.bullets:
                 bullet.draw(frame)
 
-            # UI / tekst
-            if control_scheme == "AZERTY":
-                uitleg = [
-                    "TUTORIAL AZERTY",
-                    "Beweeg: Q / D",
-                    "Spring: Z",
-                    "Schiet: SPACE",
-                    "Probeer rond te lopen en te schieten!",
-                    "Druk ESC om terug te gaan"
-                ]
-            else:
-                uitleg = [
-                    "TUTORIAL QWERTY",
-                    "Beweeg: A / D",
-                    "Spring: W",
-                    "Schiet: SPACE",
-                    "Probeer rond te lopen en te schieten!",
-                    "Druk ESC om terug te gaan"
-                ]
+            # =======================
+            # UI
+            # =======================
+
+            # SUPER METER
+            for i in range(self.player.max_meter):
+
+                kleur = (50, 50, 50)
+
+                if i < self.player.super_meter:
+                    kleur = (0, 100, 255)
+
+                pygame.draw.rect(
+                    frame,
+                    kleur,
+                    (20 + i * 60, 20, 45, 25)
+                )
+
+            # SUPER READY
+            if self.player.super_meter == self.player.max_meter:
+                txt = self.ui_font.render("SUPER READY!", True, (0, 200, 255))
+                frame.blit(txt, (BREEDTE // 2 - 150, 40))
+
+            # =======================
+            # TUTORIAL TEXT
+            # =======================
+            uitleg = [
+                "TUTORIAL",
+                "Schiet op de bean bag!",
+                "3 hits = 1 SUPER blokje",
+                "Gebruik A (of Q) voor SUPER",
+                "Hou SPACE om te schieten",
+                "ESC = terug naar menu"
+            ]
 
             for i, txt in enumerate(uitleg):
                 render = self.font.render(txt, True, (255, 255, 255))
-                frame.blit(render, (50, 50 + i * 45))
+                frame.blit(render, (50, 100 + i * 40))
 
             pygame.display.flip()
+
 
 
 
