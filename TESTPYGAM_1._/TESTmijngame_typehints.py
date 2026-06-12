@@ -23,6 +23,10 @@ control_scheme = "AZERTY"
 schaal_breedte = 1
 schaal_hooghte = 1
 
+map_image = pygame.image.load(r"TESTPYGAM_1._\achtergrond\world map.jpg")
+
+
+
 achtergrond_fase1 = pygame.image.load(
     r"TESTPYGAM_1._\achtergrond\fase 1 kikker.jpg"
 )
@@ -63,6 +67,13 @@ achtergrond_fase2 = pygame.transform.scale(
     (BREEDTE, HOOGTE)
 )
 
+achtergrond_phase3 = pygame.transform.scale(
+    achtergrond_phase3,
+    (BREEDTE, HOOGTE)
+)
+
+map_image = pygame.transform.scale(map_image, (BREEDTE, HOOGTE))
+
 
 frame = pygame.display.set_mode((BREEDTE, HOOGTE))
 
@@ -92,7 +103,69 @@ menusound = pygame.mixer.Sound(
     r'TESTPYGAM_1._\sfx\Sarias Song - Zelda Ocarina of Time - Lost Woods - Part 42.mp3'
 )
 
+class LevelSelect:
 
+    def __init__(self):
+        self.running = True
+
+        self.levels = {
+            1: pygame.Rect(110, 536, 80, 80),
+            2: pygame.Rect(251, 95, 80, 80),
+            3: pygame.Rect(527, 99, 80, 80),
+            4: pygame.Rect(696, 521, 80, 80),
+            5: pygame.Rect(812, 63, 80, 80),
+        }
+
+
+    def run(self):
+
+        while self.running:
+
+            for event in pygame.event.get():
+
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        return
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+
+                    mouse_pos = pygame.mouse.get_pos()
+
+                    for level, rect in self.levels.items():
+                        if rect.collidepoint(mouse_pos):
+                            start_game(level)
+                            return
+                #is een stukje code met behulp van copilot om de coordinaten te zien als ik op mijn kaart klik dit is zodat ik de geele cirkels beter kon plaatsen 
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+
+                    print("Mouse positie:", mouse_pos)  # 👈 DEBUG
+
+                    for level, rect in self.levels.items():
+                        if rect.collidepoint(mouse_pos):
+                            start_game(level)
+                            return
+                        
+                #---------------------------------------------------------------------------------------
+                #---------------------------------------------------------------------------------------
+
+            # 🎨 TEKEN MAP
+            frame.blit(map_image, (0, 0))
+
+            # ✅ HIER KOMT JE CODE
+            for level, rect in self.levels.items():
+                pygame.draw.circle(
+                    frame,
+                    (255, 200, 0),
+                    rect.center,
+                    20
+                )
+
+            pygame.display.flip()
 
 class Bullet:
 
@@ -1902,12 +1975,6 @@ class Game:
         else:
             self.scroll_speed = 5
 
-
-
-
-
-    
-
     def draw_ui(self) -> None:
 
         if self.god_mode:
@@ -2117,11 +2184,29 @@ def fade(screen, width, height, speed=5) -> None:
 # START GAME
 # =====================================
 
-def start_game() -> None:
+def start_game(level=1):
 
     menusound.stop()
 
     game = Game()
+
+    if level == 1:
+        game.boss.phase = 1
+
+    elif level == 2:
+        game.boss.start_phase2()
+
+    elif level == 3:
+        game.boss.start_phase2()
+        game.boss.hp = 800
+
+    elif level == 4:
+        game.boss.start_phase2()
+        game.boss.hp = 400
+
+    elif level == 5:
+        game.boss.start_phase2()
+        game.boss.hp = 100
 
     game.run()
 
@@ -2348,10 +2433,12 @@ class MainMenu:
         # ✅ KNOPPEN
         self.menu.add.vertical_margin(1)
 
-        self.menu.add.button('START', start_with_fade)
+        self.menu.add.button('START', self.open_map)
         self.menu.add.button('SETTINGS', self.settings_menu)  
         self.menu.add.button('TUTORIAL', start_tutorial)   
         self.menu.add.button('QUIT', quit_game)
+    
+    
         
 
     # 🎬 film grain
@@ -2413,6 +2500,10 @@ class MainMenu:
             menusound.play(-1)
 
         self.menu.mainloop(frame, bgfun=self.draw_background)
+    
+    def open_map(self):
+        level_select = LevelSelect()
+        level_select.run()
 
 # START
 menu = MainMenu()
